@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const filter = req.query.filter || '(today | overdue) & ##Work';
     const limit = req.query.limit || '50';
-    const url = new URL('https://api.todoist.com/rest/v2/tasks');
+    const url = new URL('https://api.todoist.com/api/v1/tasks');
     url.searchParams.set('filter', filter);
 
     try {
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      const resp = await fetch(`https://api.todoist.com/rest/v2/tasks/${taskId}/close`, {
+      const resp = await fetch(`https://api.todoist.com/api/v1/tasks/${taskId}/close`, {
         method: 'POST',
         headers,
       });
