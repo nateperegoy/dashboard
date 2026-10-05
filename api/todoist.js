@@ -22,7 +22,9 @@ export default async function handler(req, res) {
         const body = await resp.text();
         return res.status(resp.status).json({ error: 'Todoist API error', detail: body });
       }
-      const tasks = await resp.json();
+      const data = await resp.json();
+      // v1 API returns { results: [...] }, v2 returned plain array
+      const tasks = Array.isArray(data) ? data : (data.results || []);
       return res.json({ tasks });
     } catch (e) {
       return res.status(502).json({ error: 'Failed to reach Todoist', detail: e.message });
