@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const result = await get(blobPath, { access: 'private' });
-      if (result.statusCode === 404 || !result.stream) {
+      if (!result || result.statusCode === 404 || !result.stream) {
         return res.json({ data: null });
       }
       // Read stream to string
