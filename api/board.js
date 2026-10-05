@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   // GET — load state using SDK get() which handles private auth
   if (req.method === 'GET') {
     try {
-      const blob = await get(blobPath);
+      const blob = await get(blobPath, { access: 'private' });
       if (!blob) {
         return res.json({ data: null });
       }
