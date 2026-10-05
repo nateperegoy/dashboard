@@ -1230,7 +1230,7 @@ function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) { state = JSON.parse(raw); return; }
-  } catch {}
+  } catch(e) {}
 
   state = {
     projects: [
@@ -1240,7 +1240,7 @@ function loadState() {
   };
 }
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
 }
 
 // ── Ideas State ──
@@ -1259,11 +1259,11 @@ function loadPunch() {
       }
       return;
     }
-  } catch {}
+  } catch(e) {}
   punchState = { items: [] };
 }
 function savePunch() {
-  try { localStorage.setItem(PUNCH_KEY, JSON.stringify(punchState)); } catch {}
+  try { localStorage.setItem(PUNCH_KEY, JSON.stringify(punchState)); } catch(e) {}
 }
 
 function getProjectColor(projectId) {
