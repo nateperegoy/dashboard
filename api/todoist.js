@@ -11,8 +11,46 @@ export default async function handler(req, res) {
 
   // GET — fetch tasks with filter
   if (req.method === 'GET') {
+    // Debug mode: try multiple endpoints to find working filter
+    if (req.query.debug === '1') {
+      const filter = '(today | overdue) & ##Work';
+      const results = {};
+
+      // Test 1: GET /tasks with filter query param
+      try {
+        const r = await fetch(`https://api.todoist.com/api/v1/tasks?filter=${encodeURIComponent(filter)}`, { headers });
+        const d = await r.json();
+        results.get_filter = { status: r.status, count: Array.isArray(d) ? d.length : (d.results?.length || 'no results key'), keys: Object.keys(d) };
+      } catch(e) { results.get_filter = { error: e.message }; }
+
+      // Test 2: GET /tasks with project_id
+      try {
+        const r = await fetch('https://api.todoist.com/api/v1/tasks?project_id=6VwHHW45wQWxGQvR', { headers });
+        const d = await r.json();
+        results.get_project = { status: r.status, count: Array.isArray(d) ? d.length : (d.results?.length || 'no results key'), keys: Object.keys(d) };
+      } catch(e) { results.get_project = { error: e.message }; }
+
+      // Test 3: POST /tasks/filter
+      try {
+        const r = await fetch('https://api.todoist.com/api/v1/tasks/filter', { method: 'POST', headers, body: JSON.stringify({ query: filter }) });
+        const d = await r.text();
+        results.post_filter = { status: r.status, body: d.substring(0, 300) };
+      } catch(e) { results.post_filter = { error: e.message }; }
+
+      // Test 4: POST /sync with items filter
+      try {
+        const r = await fetch('https://api.todoist.com/api/v1/sync', {
+          method: 'POST', headers,
+          body: JSON.stringify({ sync_token: '*', resource_types: ['items'], filter: filter })
+        });
+        const d = await r.text();
+        results.sync = { status: r.status, body: d.substring(0, 300) };
+      } catch(e) { results.sync = { error: e.message }; }
+
+      return res.json(results);
+    }
+
     const filter = req.query.filter || '(today | overdue) & ##Work';
-    const limit = req.query.limit || '50';
     const url = new URL('https://api.todoist.com/api/v1/tasks');
     url.searchParams.set('filter', filter);
 
@@ -23,7 +61,6 @@ export default async function handler(req, res) {
         return res.status(resp.status).json({ error: 'Todoist API error', detail: body });
       }
       const data = await resp.json();
-      // v1 API returns { results: [...] }, v2 returned plain array
       const tasks = Array.isArray(data) ? data : (data.results || []);
       return res.json({ tasks });
     } catch (e) {
