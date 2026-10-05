@@ -1227,21 +1227,46 @@ function getColumnDates() {
 }
 
 let state;
-function loadState() {
+const DEFAULT_STATE = {
+  projects: [
+    { id: 'proj-general', name: 'General', color: '#4a7dac' },
+  ],
+  cards: [],
+};
+
+async function loadState() {
+  // Try cloud first
+  try {
+    const resp = await fetch('/api/board?key=board');
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.data) {
+        state = json.data;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+        return;
+      }
+    }
+  } catch(e) {}
+  // Fall back to localStorage
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) { state = JSON.parse(raw); return; }
   } catch(e) {}
-
-  state = {
-    projects: [
-      { id: 'proj-general', name: 'General', color: '#4a7dac' },
-    ],
-    cards: [],
-  };
+  state = { ...DEFAULT_STATE, projects: [...DEFAULT_STATE.projects], cards: [] };
 }
+
+let _saveTimeout = null;
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+  // Debounce cloud saves to avoid hammering on rapid edits
+  clearTimeout(_saveTimeout);
+  _saveTimeout = setTimeout(() => {
+    fetch('/api/board?key=board', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state),
+    }).catch(() => {});
+  }, 500);
 }
 
 // ── Ideas State ──
@@ -1250,7 +1275,23 @@ const PUNCH_SECTIONS = [
   { id: 'personal', label: 'Personal / Home Dashboard' },
 ];
 let punchState;
-function loadPunch() {
+async function loadPunch() {
+  // Try cloud first
+  try {
+    const resp = await fetch('/api/board?key=ideas');
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.data) {
+        punchState = json.data;
+        if (punchState.items) {
+          punchState.items.forEach(i => { if (!i.section) i.section = 'work'; });
+        }
+        try { localStorage.setItem(PUNCH_KEY, JSON.stringify(punchState)); } catch(e) {}
+        return;
+      }
+    }
+  } catch(e) {}
+  // Fall back to localStorage
   try {
     const raw = localStorage.getItem(PUNCH_KEY);
     if (raw) {
@@ -1263,8 +1304,18 @@ function loadPunch() {
   } catch(e) {}
   punchState = { items: [] };
 }
+
+let _punchSaveTimeout = null;
 function savePunch() {
   try { localStorage.setItem(PUNCH_KEY, JSON.stringify(punchState)); } catch(e) {}
+  clearTimeout(_punchSaveTimeout);
+  _punchSaveTimeout = setTimeout(() => {
+    fetch('/api/board?key=ideas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(punchState),
+    }).catch(() => {});
+  }, 500);
 }
 
 function getProjectColor(projectId) {
@@ -2228,12 +2279,14 @@ function migrateState() {
 }
 
 // ── Init ──
-loadState();
-loadPunch();
-migrateState();
-renderBoard();
-document.getElementById('period-label').textContent = getQuarterLabel() + ' · Horizons';
-setActiveTab('horizons');
+(async () => {
+  await loadState();
+  await loadPunch();
+  migrateState();
+  renderBoard();
+  document.getElementById('period-label').textContent = getQuarterLabel() + ' · Horizons';
+  setActiveTab('horizons');
+})();
 </script>
 
 </body>
