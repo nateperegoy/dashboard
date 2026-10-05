@@ -1,4 +1,4 @@
-import { put, get } from '@vercel/blob';
+import { put, get, del, list } from '@vercel/blob';
 
 // Cloud sync for board state via Vercel Blob (OIDC auth via BLOB_STORE_ID)
 export default async function handler(req, res) {
@@ -49,6 +49,19 @@ export default async function handler(req, res) {
       return res.json({ ok: true });
     } catch (e) {
       return res.status(502).json({ error: 'Blob write error', detail: e.message });
+    }
+  }
+
+  // DELETE — clear blob (for cleanup)
+  if (req.method === 'DELETE') {
+    try {
+      const { blobs } = await list({ prefix: blobPath, limit: 10 });
+      if (blobs.length > 0) {
+        await del(blobs.map(b => b.url));
+      }
+      return res.json({ ok: true, deleted: blobs.length });
+    } catch (e) {
+      return res.status(502).json({ error: 'Blob delete error', detail: e.message });
     }
   }
 
