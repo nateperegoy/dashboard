@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       }
       const resp = await fetch(blobs[0].url);
       if (!resp.ok) {
-        return res.json({ data: null });
+        return res.json({ data: null, debug: { status: resp.status, url: blobs[0].url.substring(0, 80) } });
       }
       const data = await resp.json();
       return res.json({ data });
@@ -40,13 +40,13 @@ export default async function handler(req, res) {
       if (blobs.length > 0) {
         await del(blobs[0].url);
       }
-      // Upload new
-      await put(blobPath, JSON.stringify(body), {
+      // Upload new — access: 'public' so the URL can be fetched without auth
+      const result = await put(blobPath, JSON.stringify(body), {
         contentType: 'application/json',
-        access: 'private',
+        access: 'public',
         addRandomSuffix: false,
       });
-      return res.json({ ok: true });
+      return res.json({ ok: true, url: result.url });
     } catch (e) {
       return res.status(502).json({ error: 'Blob write error', detail: e.message });
     }
