@@ -1,4 +1,4 @@
-import { put, get, del } from '@vercel/blob';
+import { put, get } from '@vercel/blob';
 
 // Cloud sync for board state via Vercel Blob (OIDC auth via BLOB_STORE_ID)
 export default async function handler(req, res) {
@@ -9,18 +9,22 @@ export default async function handler(req, res) {
 
   const blobPath = `dashboard-${key}.json`;
 
-  // GET — load state using SDK get() which handles private auth
+  // GET — load state
   if (req.method === 'GET') {
     try {
-      const blob = await get(blobPath, { access: 'private' });
-      if (!blob) {
+      const result = await get(blobPath, { access: 'private' });
+      if (result.statusCode === 404 || !result.stream) {
         return res.json({ data: null });
       }
-      const text = await blob.text();
+      // Read stream to string
+      const chunks = [];
+      for await (const chunk of result.stream) {
+        chunks.push(chunk);
+      }
+      const text = Buffer.concat(chunks).toString('utf-8');
       const data = JSON.parse(text);
       return res.json({ data });
     } catch (e) {
-      // BlobNotFoundError means no data saved yet
       if (e.code === 'blob_not_found' || e.name === 'BlobNotFoundError') {
         return res.json({ data: null });
       }
@@ -40,6 +44,7 @@ export default async function handler(req, res) {
         contentType: 'application/json',
         access: 'private',
         addRandomSuffix: false,
+        allowOverwrite: true,
       });
       return res.json({ ok: true });
     } catch (e) {
