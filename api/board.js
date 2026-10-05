@@ -1,4 +1,4 @@
-import { put, list, del } from '@vercel/blob';
+import { put, get, del } from '@vercel/blob';
 
 // Cloud sync for board state via Vercel Blob (OIDC auth via BLOB_STORE_ID)
 export default async function handler(req, res) {
@@ -9,20 +9,21 @@ export default async function handler(req, res) {
 
   const blobPath = `dashboard-${key}.json`;
 
-  // GET — load state
+  // GET — load state using SDK get() which handles private auth
   if (req.method === 'GET') {
     try {
-      const { blobs } = await list({ prefix: blobPath, limit: 1 });
-      if (blobs.length === 0) {
+      const blob = await get(blobPath);
+      if (!blob) {
         return res.json({ data: null });
       }
-      const resp = await fetch(blobs[0].url);
-      if (!resp.ok) {
-        return res.json({ data: null, debug: { status: resp.status, url: blobs[0].url.substring(0, 80) } });
-      }
-      const data = await resp.json();
+      const text = await blob.text();
+      const data = JSON.parse(text);
       return res.json({ data });
     } catch (e) {
+      // BlobNotFoundError means no data saved yet
+      if (e.code === 'blob_not_found' || e.name === 'BlobNotFoundError') {
+        return res.json({ data: null });
+      }
       return res.status(502).json({ error: 'Blob read error', detail: e.message });
     }
   }
@@ -35,18 +36,12 @@ export default async function handler(req, res) {
     }
 
     try {
-      // Delete old blob if exists
-      const { blobs } = await list({ prefix: blobPath, limit: 1 });
-      if (blobs.length > 0) {
-        await del(blobs[0].url);
-      }
-      // Upload new — access: 'public' so the URL can be fetched without auth
-      const result = await put(blobPath, JSON.stringify(body), {
+      await put(blobPath, JSON.stringify(body), {
         contentType: 'application/json',
-        access: 'public',
+        access: 'private',
         addRandomSuffix: false,
       });
-      return res.json({ ok: true, url: result.url });
+      return res.json({ ok: true });
     } catch (e) {
       return res.status(502).json({ error: 'Blob write error', detail: e.message });
     }
