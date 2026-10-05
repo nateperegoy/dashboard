@@ -1647,6 +1647,7 @@ function showAddForm(btn, columnId) {
           <div class="color-dot" style="background:${p.color}" data-project-id="${p.id}" title="${esc(p.name)}" onclick="selectProject(this)"></div>
         `).join('')}
       </div>
+      <span id="add-label-name" style="font-size:11px;color:var(--text-muted);min-width:60px">${esc(state.projects[0]?.name || '')}</span>
       <div style="flex:1"></div>
       <button class="btn" onclick="cancelAdd(this)" style="font-size:12px;padding:4px 10px">Cancel</button>
       <button class="btn btn-primary" onclick="submitAdd(this, '${columnId}')" style="font-size:12px;padding:4px 10px">Add</button>
@@ -1656,6 +1657,22 @@ function showAddForm(btn, columnId) {
 
   const firstDot = form.querySelector('.color-dot');
   if (firstDot) firstDot.classList.add('active');
+
+  // Show label name on hover and restore on mouseleave
+  const labelEl = form.querySelector('#add-label-name');
+  form.querySelectorAll('.color-dot').forEach(dot => {
+    dot.addEventListener('mouseenter', () => {
+      const p = state.projects.find(pr => pr.id === dot.dataset.projectId);
+      if (p && labelEl) labelEl.textContent = p.name;
+    });
+    dot.addEventListener('mouseleave', () => {
+      const activeDot = form.querySelector('.color-dot.active');
+      if (activeDot && labelEl) {
+        const p = state.projects.find(pr => pr.id === activeDot.dataset.projectId);
+        labelEl.textContent = p ? p.name : '';
+      }
+    });
+  });
 
   const input = form.querySelector('#add-input');
   input.addEventListener('keydown', (e) => {
@@ -1668,6 +1685,11 @@ function showAddForm(btn, columnId) {
 function selectProject(dot) {
   dot.closest('.color-picker-row').querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
   dot.classList.add('active');
+  const labelEl = dot.closest('.add-form').querySelector('#add-label-name');
+  if (labelEl) {
+    const p = state.projects.find(pr => pr.id === dot.dataset.projectId);
+    labelEl.textContent = p ? p.name : '';
+  }
 }
 
 function cancelAdd(el) {
