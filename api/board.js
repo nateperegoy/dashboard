@@ -1,36 +1,43 @@
-// Cloud sync for board state via Vercel KV (Upstash Redis REST API)
+// Cloud sync for board state via Vercel Blob
 export default async function handler(req, res) {
-  const kvUrl = process.env.KV_REST_API_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN;
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
-  if (!kvUrl || !kvToken) {
-    return res.status(500).json({ error: 'KV store not configured' });
+  if (!blobToken) {
+    return res.status(500).json({ error: 'Blob store not configured' });
   }
 
-  const headers = { Authorization: `Bearer ${kvToken}` };
   const key = req.query.key;
-
   if (!key || !['board', 'ideas'].includes(key)) {
     return res.status(400).json({ error: 'key must be "board" or "ideas"' });
   }
 
-  const kvKey = `dashboard:${key}`;
+  const blobPath = `dashboard-${key}.json`;
 
   // GET — load state
   if (req.method === 'GET') {
     try {
-      const resp = await fetch(`${kvUrl}/get/${kvKey}`, { headers });
-      if (!resp.ok) {
-        return res.status(502).json({ error: 'KV read failed' });
+      // List blobs to find the one with our path
+      const listResp = await fetch(
+        `https://blob.vercel-storage.com?prefix=${blobPath}&limit=1`,
+        { headers: { Authorization: `Bearer ${blobToken}` } }
+      );
+      if (!listResp.ok) {
+        return res.status(502).json({ error: 'Blob list failed' });
       }
-      const data = await resp.json();
-      // Upstash returns { result: "stringified JSON" } or { result: null }
-      if (data.result === null) {
+      const listData = await listResp.json();
+      if (!listData.blobs || listData.blobs.length === 0) {
         return res.json({ data: null });
       }
-      return res.json({ data: JSON.parse(data.result) });
+      // Fetch the blob content
+      const blobUrl = listData.blobs[0].url;
+      const dataResp = await fetch(blobUrl);
+      if (!dataResp.ok) {
+        return res.json({ data: null });
+      }
+      const data = await dataResp.json();
+      return res.json({ data });
     } catch (e) {
-      return res.status(502).json({ error: 'KV read error', detail: e.message });
+      return res.status(502).json({ error: 'Blob read error', detail: e.message });
     }
   }
 
@@ -42,18 +49,45 @@ export default async function handler(req, res) {
     }
 
     try {
-      const resp = await fetch(`${kvUrl}`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify(['SET', kvKey, JSON.stringify(body)]),
-      });
-      if (!resp.ok) {
-        const detail = await resp.text();
-        return res.status(502).json({ error: 'KV write failed', detail });
+      // Delete existing blob with this path first (list + delete)
+      const listResp = await fetch(
+        `https://blob.vercel-storage.com?prefix=${blobPath}&limit=1`,
+        { headers: { Authorization: `Bearer ${blobToken}` } }
+      );
+      if (listResp.ok) {
+        const listData = await listResp.json();
+        if (listData.blobs && listData.blobs.length > 0) {
+          await fetch(`https://blob.vercel-storage.com/delete`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${blobToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ urls: [listData.blobs[0].url] }),
+          });
+        }
+      }
+
+      // Upload new blob
+      const putResp = await fetch(
+        `https://blob.vercel-storage.com/${blobPath}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${blobToken}`,
+            'Content-Type': 'application/json',
+            'x-content-type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        }
+      );
+      if (!putResp.ok) {
+        const detail = await putResp.text();
+        return res.status(502).json({ error: 'Blob write failed', detail });
       }
       return res.json({ ok: true });
     } catch (e) {
-      return res.status(502).json({ error: 'KV write error', detail: e.message });
+      return res.status(502).json({ error: 'Blob write error', detail: e.message });
     }
   }
 
