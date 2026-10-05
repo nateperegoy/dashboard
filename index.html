@@ -1247,10 +1247,19 @@ async function loadState() {
       }
     }
   } catch(e) {}
-  // Fall back to localStorage
+  // Fall back to localStorage — and seed the cloud if we have local data
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { state = JSON.parse(raw); return; }
+    if (raw) {
+      state = JSON.parse(raw);
+      // Seed cloud with localStorage data
+      fetch('/api/board?key=board', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: raw,
+      }).catch(() => {});
+      return;
+    }
   } catch(e) {}
   state = { ...DEFAULT_STATE, projects: [...DEFAULT_STATE.projects], cards: [] };
 }
@@ -1291,7 +1300,7 @@ async function loadPunch() {
       }
     }
   } catch(e) {}
-  // Fall back to localStorage
+  // Fall back to localStorage — and seed the cloud
   try {
     const raw = localStorage.getItem(PUNCH_KEY);
     if (raw) {
@@ -1299,6 +1308,11 @@ async function loadPunch() {
       if (punchState.items) {
         punchState.items.forEach(i => { if (!i.section) i.section = 'work'; });
       }
+      fetch('/api/board?key=ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: raw,
+      }).catch(() => {});
       return;
     }
   } catch(e) {}
