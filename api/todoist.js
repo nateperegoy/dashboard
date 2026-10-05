@@ -24,32 +24,35 @@ export default async function handler(req, res) {
       if (!workProject) {
         return res.json({ tasks: [] });
       }
-      const workIds = new Set([workProject.id]);
+      const workIds = [workProject.id];
       projects.forEach(p => {
-        if (p.parent_id === workProject.id) workIds.add(p.id);
+        if (p.parent_id === workProject.id) workIds.push(p.id);
       });
 
-      // 2. Fetch all tasks (paginate if needed)
-      let allTasks = [];
-      let cursor = null;
-      do {
-        const url = new URL('https://api.todoist.com/api/v1/tasks');
-        if (cursor) url.searchParams.set('cursor', cursor);
-        const taskResp = await fetch(url.toString(), { headers });
-        if (!taskResp.ok) {
-          const body = await taskResp.text();
-          return res.status(taskResp.status).json({ error: 'Todoist API error', detail: body });
-        }
-        const taskData = await taskResp.json();
-        const batch = taskData.results || taskData || [];
-        allTasks = allTasks.concat(batch);
-        cursor = taskData.next_cursor || null;
-      } while (cursor);
-
-      // 3. Filter: Work project + subprojects, due today or overdue
+      // 2. Fetch tasks per project (parallel) — much faster than fetching all tasks
       const today = new Date().toISOString().slice(0, 10);
+      const fetches = workIds.map(async (pid) => {
+        let projectTasks = [];
+        let cursor = null;
+        do {
+          const url = new URL('https://api.todoist.com/api/v1/tasks');
+          url.searchParams.set('project_id', pid);
+          if (cursor) url.searchParams.set('cursor', cursor);
+          const resp = await fetch(url.toString(), { headers });
+          if (!resp.ok) return [];
+          const data = await resp.json();
+          const batch = data.results || data || [];
+          projectTasks = projectTasks.concat(batch);
+          cursor = data.next_cursor || null;
+        } while (cursor);
+        return projectTasks;
+      });
+
+      const results = await Promise.all(fetches);
+      const allTasks = results.flat();
+
+      // 3. Filter: due today or overdue
       const tasks = allTasks.filter(t => {
-        if (!workIds.has(t.project_id)) return false;
         if (!t.due) return false;
         return t.due.date <= today;
       });
