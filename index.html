@@ -905,11 +905,19 @@ body {
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
   margin-bottom: 8px;
-  cursor: grab;
   transition: opacity 0.2s, box-shadow 0.15s;
 }
 .punch-item:hover { box-shadow: var(--shadow-sm); }
 .punch-item.done { opacity: 0.45; }
+.punch-drag-handle {
+  cursor: grab;
+  color: rgba(255,255,255,0.2);
+  font-size: 12px;
+  user-select: none;
+  flex-shrink: 0;
+  padding: 2px 0;
+}
+.punch-drag-handle:hover { color: rgba(255,255,255,0.45); }
 .punch-item.done .punch-item-text { text-decoration: line-through; }
 .punch-check {
   width: 20px;
@@ -2321,9 +2329,10 @@ function renderPunch() {
       [...activeItems, ...doneItems].forEach(item => {
         html += `
           <li class="punch-item ${item.done ? 'done' : ''}" data-punch-id="${item.id}">
+            <span class="punch-drag-handle">⠿</span>
             <button class="punch-check" onclick="togglePunch('${item.id}')">${item.done ? '✓' : ''}</button>
             <span class="punch-item-text" contenteditable="false"
-              ondblclick="this.contentEditable='true';this.focus()"
+              onclick="this.contentEditable='true';this.focus()"
               onblur="updatePunchText('${item.id}', this)"
               onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${esc(item.text)}</span>
             <button class="punch-item-delete" onclick="deletePunch('${item.id}')" aria-label="Delete">&times;</button>
@@ -2351,7 +2360,7 @@ function renderPunch() {
       animation: 200,
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
-      handle: '.punch-item',
+      handle: '.punch-drag-handle',
       draggable: '.punch-item',
       onEnd: function(evt) {
         const listEl = evt.to;
