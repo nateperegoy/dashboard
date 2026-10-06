@@ -1723,7 +1723,7 @@ function showAddForm(btn, columnId) {
   const form = document.createElement('div');
   form.className = 'add-form';
   form.innerHTML = `
-    <input type="text" placeholder="What are you working on?" autofocus id="add-input">
+    <input type="text" placeholder="Focus area or task…" autofocus id="add-input">
     <div class="color-picker-row" id="color-picker" style="margin-top:6px">
       ${state.projects.map(p => `
         <div class="project-option" data-project-id="${p.id}" onclick="selectProject(this)"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>
