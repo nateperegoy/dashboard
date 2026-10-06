@@ -764,7 +764,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 8px;
 }
 .today-back {
   font-family: inherit;
@@ -851,7 +851,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 20px 0 12px;
+  margin: 0 0 12px;
   padding: 0 2px;
 }
 .today-rocks-icon {
@@ -2344,9 +2344,9 @@ function showToday() {
       <div>
         <h1 class="today-day-name">${dayName}</h1>
         <p class="today-date-label">${dateStr}</p>
-        <div class="today-section-label" style="margin-top:20px"><span class="today-rocks-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="none"><path d="M3 12l1.5-4 2-3h3l2 3 1.5 4H3z" fill="currentColor" opacity="0.25"/><path d="M3 12l1.5-4 2-3h3l2 3 1.5 4H3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 8.5L7 12M10.5 8.5L9 12M4.5 8h7" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/></svg></span>Today's Big Rocks</div>
       </div>
     </div>
+    <div class="today-section-label"><span class="today-rocks-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="none"><path d="M3 12l1.5-4 2-3h3l2 3 1.5 4H3z" fill="currentColor" opacity="0.25"/><path d="M3 12l1.5-4 2-3h3l2 3 1.5 4H3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 8.5L7 12M10.5 8.5L9 12M4.5 8h7" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/></svg></span>Today's Big Rocks</div>
   `;
 
   if (dayCards.length > 0) {
