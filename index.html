@@ -1361,6 +1361,15 @@ body {
 }
 .todoist-task-priority.p1 { color: #d1453b; }
 .todoist-task-priority.p2 { color: #eb8909; }
+.todoist-task-priority.p3 { color: #4073ff; }
+
+/* Priority tint backgrounds */
+.todoist-task.priority-p1 { background: rgba(209, 69, 59, 0.08); border-color: rgba(209, 69, 59, 0.2); }
+.todoist-task.priority-p1:hover { border-color: rgba(209, 69, 59, 0.35); }
+.todoist-task.priority-p2 { background: rgba(235, 137, 9, 0.08); border-color: rgba(235, 137, 9, 0.2); }
+.todoist-task.priority-p2:hover { border-color: rgba(235, 137, 9, 0.35); }
+.todoist-task.priority-p3 { background: rgba(64, 115, 255, 0.08); border-color: rgba(64, 115, 255, 0.2); }
+.todoist-task.priority-p3:hover { border-color: rgba(64, 115, 255, 0.35); }
 .todoist-empty {
   padding: 16px 0;
   font-size: 13px;
@@ -2685,12 +2694,12 @@ function renderTodoistSection() {
     const isOverdue = dueDate && dueDate < today;
     // Map REST API priority (4=urgent) to display
     const p = t.priority || 1;
-    const priorityClass = p === 4 ? 'p1' : p === 3 ? 'p2' : '';
-    const priorityLabel = p === 4 ? 'P1' : p === 3 ? 'P2' : '';
+    const priorityClass = p === 4 ? 'p1' : p === 3 ? 'p2' : p === 2 ? 'p3' : '';
+    const priorityLabel = p === 4 ? 'P1' : p === 3 ? 'P2' : p === 2 ? 'P3' : '';
     const labels = (t.labels || []).join(', ');
 
     return `
-      <div class="todoist-task" data-task-id="${t.id}">
+      <div class="todoist-task ${priorityClass ? 'priority-' + priorityClass : ''}" data-task-id="${t.id}">
         <button class="todoist-check" onclick="completeTodoistTask('${t.id}')" aria-label="Complete task">✓</button>
         <div class="todoist-task-body">
           <div class="todoist-task-title">${esc(t.content)}</div>
