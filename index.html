@@ -420,20 +420,35 @@ body {
   margin-top: 6px;
 }
 .color-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 2px solid var(--border);
-  cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.15s;
 }
-.color-dot:hover, .color-dot.active { border-color: var(--text); }
 
 .color-picker-row {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   flex-wrap: wrap;
+}
+.project-option {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.project-option:hover { border-color: var(--text-muted); }
+.project-option.active {
+  border-color: var(--text);
+  color: var(--text);
+  background: rgba(255,255,255,0.05);
 }
 
 /* Empty state */
@@ -1626,10 +1641,9 @@ function openCardMenu(cardId, btnEl) {
       <input type="text" value="${esc(card.note || '')}" placeholder="Add a quick note…" id="menu-note-input" />
     </div>
     <div class="card-menu-section">Label</div>
-    <div class="card-menu-colors">
-      ${state.projects.map(p => `<div class="color-dot ${card.projectId === p.id ? 'active' : ''}" style="background:${p.color}" title="${esc(p.name)}" data-project-id="${p.id}"></div>`).join('')}
+    <div class="card-menu-colors" style="display:flex;flex-wrap:wrap;gap:4px;padding:2px 12px 6px">
+      ${state.projects.map(p => `<div class="project-option ${card.projectId === p.id ? 'active' : ''}" data-project-id="${p.id}"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>`).join('')}
     </div>
-    <div class="card-menu-label-name" id="menu-label-name" style="padding:2px 12px 6px;font-size:11px;color:var(--text-muted);min-height:16px">${esc(getProjectName(card.projectId))}</div>
     <div class="card-menu-divider"></div>
     <div class="card-menu-item" data-action="duplicate">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -1664,21 +1678,12 @@ function openCardMenu(cardId, btnEl) {
   noteInput.addEventListener('blur', saveNote);
   noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); noteInput.blur(); } });
 
-  const labelNameEl = menu.querySelector('#menu-label-name');
-  menu.querySelectorAll('.color-dot').forEach(dot => {
-    dot.addEventListener('mouseenter', () => {
-      const p = state.projects.find(pr => pr.id === dot.dataset.projectId);
-      if (labelNameEl && p) labelNameEl.textContent = p.name;
-    });
-    dot.addEventListener('mouseleave', () => {
-      if (labelNameEl) labelNameEl.textContent = getProjectName(card.projectId);
-    });
-    dot.addEventListener('click', () => {
-      card.projectId = dot.dataset.projectId;
+  menu.querySelectorAll('.project-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      card.projectId = opt.dataset.projectId;
       saveState();
-      menu.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-      dot.classList.add('active');
-      if (labelNameEl) labelNameEl.textContent = getProjectName(card.projectId);
+      menu.querySelectorAll('.project-option').forEach(d => d.classList.remove('active'));
+      opt.classList.add('active');
       const bar = document.querySelector(`.card[data-card-id="${cardId}"] .card-color-bar`);
       if (bar) bar.style.background = getProjectColor(card.projectId);
     });
@@ -1710,10 +1715,9 @@ function showAddForm(btn, columnId) {
     <div class="add-form-row">
       <div class="color-picker-row" id="color-picker">
         ${state.projects.map(p => `
-          <div class="color-dot" style="background:${p.color}" data-project-id="${p.id}" title="${esc(p.name)}" onclick="selectProject(this)"></div>
+          <div class="project-option" data-project-id="${p.id}" onclick="selectProject(this)"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>
         `).join('')}
       </div>
-      <span id="add-label-name" style="font-size:11px;color:var(--text-muted);min-width:60px">${esc(state.projects[0]?.name || '')}</span>
       <div style="flex:1"></div>
       <button class="btn" onclick="cancelAdd(this)" style="font-size:12px;padding:4px 10px">Cancel</button>
       <button class="btn btn-primary" onclick="submitAdd(this, '${columnId}')" style="font-size:12px;padding:4px 10px">Add</button>
@@ -1721,24 +1725,8 @@ function showAddForm(btn, columnId) {
   `;
   btn.parentNode.insertBefore(form, btn);
 
-  const firstDot = form.querySelector('.color-dot');
-  if (firstDot) firstDot.classList.add('active');
-
-  // Show label name on hover and restore on mouseleave
-  const labelEl = form.querySelector('#add-label-name');
-  form.querySelectorAll('.color-dot').forEach(dot => {
-    dot.addEventListener('mouseenter', () => {
-      const p = state.projects.find(pr => pr.id === dot.dataset.projectId);
-      if (p && labelEl) labelEl.textContent = p.name;
-    });
-    dot.addEventListener('mouseleave', () => {
-      const activeDot = form.querySelector('.color-dot.active');
-      if (activeDot && labelEl) {
-        const p = state.projects.find(pr => pr.id === activeDot.dataset.projectId);
-        labelEl.textContent = p ? p.name : '';
-      }
-    });
-  });
+  const firstOption = form.querySelector('.project-option');
+  if (firstOption) firstOption.classList.add('active');
 
   const input = form.querySelector('#add-input');
   input.addEventListener('keydown', (e) => {
@@ -1748,14 +1736,10 @@ function showAddForm(btn, columnId) {
   input.focus();
 }
 
-function selectProject(dot) {
-  dot.closest('.color-picker-row').querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-  dot.classList.add('active');
-  const labelEl = dot.closest('.add-form').querySelector('#add-label-name');
-  if (labelEl) {
-    const p = state.projects.find(pr => pr.id === dot.dataset.projectId);
-    labelEl.textContent = p ? p.name : '';
-  }
+function selectProject(el) {
+  const option = el.closest('.project-option');
+  option.closest('.color-picker-row').querySelectorAll('.project-option').forEach(d => d.classList.remove('active'));
+  option.classList.add('active');
 }
 
 function cancelAdd(el) {
@@ -1771,8 +1755,8 @@ function submitAdd(el, columnId) {
   const title = input.value.trim();
   if (!title) { input.focus(); return; }
 
-  const activeDot = form.querySelector('.color-dot.active');
-  const projectId = activeDot ? activeDot.dataset.projectId : state.projects[0]?.id;
+  const activeOption = form.querySelector('.project-option.active');
+  const projectId = activeOption ? activeOption.dataset.projectId : state.projects[0]?.id;
 
   state.cards.push({
     id: generateId(),
