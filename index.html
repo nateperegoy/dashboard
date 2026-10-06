@@ -103,19 +103,22 @@ body {
 .app-header .btn {
   background: rgba(255,255,255,0.08);
   border: none;
-  color: rgba(255,255,255,0.7);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 10px;
   font-weight: 500;
+  letter-spacing: 0.02em;
   transition: all 0.15s ease;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
+  min-width: 52px;
 }
 .app-header .btn:hover {
   background: rgba(255,255,255,0.15);
-  color: #fff;
+  color: rgba(255,255,255,0.9);
 }
 .app-header .btn.active-tab {
   background: rgba(255,255,255,0.2);
@@ -123,16 +126,21 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .app-header .btn svg {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 .app-header .btn.settings-btn {
   padding: 6px 8px;
-  opacity: 0.6;
+  min-width: auto;
+  opacity: 0.5;
 }
 .app-header .btn.settings-btn:hover {
   opacity: 1;
+}
+.app-header .btn.settings-btn svg {
+  width: 18px;
+  height: 18px;
 }
 .header-row {
   display: flex;
@@ -993,8 +1001,8 @@ body {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 48px;
-  height: 48px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: var(--column-header-bg);
   border: 1px solid var(--border);
@@ -1057,20 +1065,26 @@ body {
   background: var(--accent); color: #fff; border-color: var(--accent);
 }
 .archive-months {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 0;
   max-width: 900px;
   margin: 0 auto;
-  min-height: 400px;
+}
+.archive-months.quarterly {
+  grid-template-columns: repeat(3, 1fr);
 }
 .archive-month-col {
-  flex: 1 1 0;
   min-width: 0;
   border-right: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
 }
 .archive-month-col:last-child { border-right: none; }
+.archive-months:not(.quarterly) .archive-month-col:nth-child(4n) { border-right: none; }
+.archive-months:not(.quarterly) .archive-month-col:nth-last-child(-n+4) { border-bottom: none; }
+.archive-months.quarterly .archive-month-col { border-bottom: none; }
 .archive-month-header {
   padding: 10px 12px;
   background: var(--bg);
@@ -1333,7 +1347,7 @@ body {
 <div class="archive-view" id="archive-view"></div>
 
 <button class="archive-fab" id="archive-fab" onclick="showArchive()" title="Archive">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
 </button>
 
 <div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
@@ -2573,7 +2587,9 @@ function unarchiveCard(cardId) {
   else renderAll();
 }
 
-let archiveFilter = 'year'; // 'year', 'q1', 'q2', 'q3', 'q4'
+// Default to current quarter
+const _currentQ = Math.floor(new Date().getMonth() / 3) + 1;
+let archiveFilter = 'q' + _currentQ; // 'year', 'q1', 'q2', 'q3', 'q4'
 
 function showArchive(filter) {
   cleanupTodoist();
@@ -2598,17 +2614,15 @@ function showArchive(filter) {
   const now = new Date();
   const year = now.getFullYear();
 
-  // Determine which 3 months to show
+  // Determine which months to show
   let displayMonths; // array of [year, monthIndex] (0-based)
   if (archiveFilter === 'q1') displayMonths = [[year,0],[year,1],[year,2]];
   else if (archiveFilter === 'q2') displayMonths = [[year,3],[year,4],[year,5]];
   else if (archiveFilter === 'q3') displayMonths = [[year,6],[year,7],[year,8]];
   else if (archiveFilter === 'q4') displayMonths = [[year,9],[year,10],[year,11]];
   else {
-    // "This Year" — show the 3 most recent months with archived items, or current quarter
-    const currentQ = Math.floor(now.getMonth() / 3);
-    const qStart = currentQ * 3;
-    displayMonths = [[year, qStart], [year, qStart+1], [year, qStart+2]];
+    // "Year" — show all 12 months
+    displayMonths = Array.from({length: 12}, (_, i) => [year, i]);
   }
 
   // Build month data
@@ -2642,7 +2656,7 @@ function showArchive(filter) {
         ${filterBtn('q4', 'Q4')}
       </div>
     </div>
-    <div class="archive-months">
+    <div class="archive-months${archiveFilter !== 'year' ? ' quarterly' : ''}">
   `;
 
   monthData.forEach(({ label, cards }) => {
