@@ -1724,6 +1724,7 @@ function showAddForm(btn, columnId) {
   form.className = 'add-form';
   form.innerHTML = `
     <input type="text" placeholder="Focus area or task…" autofocus id="add-input">
+    <textarea placeholder="Note (optional)" id="add-note" rows="2" style="font-family:inherit;font-size:13px;border:1px solid var(--border);background:transparent;color:var(--text);width:100%;padding:6px 8px;border-radius:var(--radius-sm);resize:vertical;margin-top:6px;box-sizing:border-box"></textarea>
     <div class="color-picker-row" id="color-picker" style="margin-top:6px">
       ${state.projects.map(p => `
         <div class="project-option" data-project-id="${p.id}" onclick="selectProject(this)"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>
@@ -1771,6 +1772,9 @@ function submitAdd(el, columnId) {
   const title = input.value.trim();
   if (!title) { input.focus(); _addingCard = false; return; }
 
+  const noteEl = form.querySelector('#add-note');
+  const note = noteEl ? noteEl.value.trim() : '';
+
   const activeOption = form.querySelector('.project-option.active');
   const projectId = activeOption ? activeOption.dataset.projectId : state.projects[0]?.id;
 
@@ -1782,7 +1786,7 @@ function submitAdd(el, columnId) {
   state.cards.push({
     id: generateId(),
     title: title,
-    note: '',
+    note: note,
     projectId: projectId,
     column: columnId,
     details: [],
