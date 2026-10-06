@@ -2013,12 +2013,12 @@ function showToday() {
         <button class="today-back" onclick="showHorizons()">← Horizons</button>
         <h1 class="today-day-name">${dayName}</h1>
         <p class="today-date-label">${dateStr}</p>
+        <div class="today-section-label" style="margin-top:16px">Big Rocks</div>
       </div>
     </div>
   `;
 
   if (rockCards.length > 0) {
-    html += `<div class="today-section-label">Big Rocks</div>`;
     html += rockCards.map(c => {
       const color = getProjectColor(c.projectId);
       const projName = getProjectName(c.projectId);
