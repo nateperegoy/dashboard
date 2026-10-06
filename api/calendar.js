@@ -1,3 +1,5 @@
+import ical from 'node-ical';
+
 export default async function handler(req, res) {
   const feedUrl = process.env.CALENDAR_FEED_URL;
   if (!feedUrl) {
@@ -16,15 +18,85 @@ export default async function handler(req, res) {
       return res.status(resp.status).json({ error: 'Failed to fetch calendar feed' });
     }
     const icsText = await resp.text();
-    const events = parseICS(icsText);
 
-    // Filter to today's events in user's timezone
+    // Parse with node-ical (handles RRULE recurrence expansion)
+    const parsed = ical.sync.parseICS(icsText);
+
+    // Build today's date range in Denver timezone
     const now = new Date();
     const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
-    const todayEvents = events.filter(e => {
-      const startDate = e.start.slice(0, 10);
-      return startDate === todayStr;
-    });
+    const todayStart = toDateInTZ(todayStr, '00:00:00', 'America/Denver');
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    const todayEvents = [];
+
+    for (const key of Object.keys(parsed)) {
+      const evt = parsed[key];
+      if (evt.type !== 'VEVENT') continue;
+      if (!evt.summary) continue;
+
+      // If the event has an RRULE, expand occurrences for today
+      if (evt.rrule) {
+        try {
+          // Get occurrences between today start and today end
+          const occurrences = evt.rrule.between(todayStart, todayEnd, true);
+          for (const occ of occurrences) {
+            // Check EXDATE exclusions
+            if (evt.exdate) {
+              const occTime = occ.getTime();
+              const excluded = Object.values(evt.exdate).some(exd => {
+                const exDate = exd instanceof Date ? exd : new Date(exd);
+                return Math.abs(exDate.getTime() - occTime) < 24 * 60 * 60 * 1000
+                  && exDate.toLocaleDateString('en-CA', { timeZone: 'America/Denver' }) === todayStr;
+              });
+              if (excluded) continue;
+            }
+
+            const duration = evt.end && evt.start
+              ? evt.end.getTime() - evt.start.getTime()
+              : 30 * 60 * 1000;
+            const occEnd = new Date(occ.getTime() + duration);
+
+            todayEvents.push({
+              summary: evt.summary,
+              start: formatInTZ(occ, 'America/Denver'),
+              end: formatInTZ(occEnd, 'America/Denver'),
+              location: evt.location || null,
+              allDay: isAllDay(evt),
+            });
+          }
+        } catch (e) {
+          // If rrule expansion fails, fall through to single-event check
+        }
+      }
+
+      // Also check the event itself (non-recurring, or the original occurrence)
+      if (evt.start) {
+        const startDate = evt.start instanceof Date ? evt.start : new Date(evt.start);
+        const startStr = startDate.toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+
+        if (startStr === todayStr) {
+          // Avoid duplicates from rrule expansion
+          const alreadyAdded = todayEvents.some(e =>
+            e.summary === evt.summary &&
+            e.start === formatInTZ(startDate, 'America/Denver')
+          );
+          if (!alreadyAdded) {
+            const endDate = evt.end ? (evt.end instanceof Date ? evt.end : new Date(evt.end)) : null;
+            todayEvents.push({
+              summary: evt.summary,
+              start: formatInTZ(startDate, 'America/Denver'),
+              end: endDate ? formatInTZ(endDate, 'America/Denver') : null,
+              location: evt.location || null,
+              allDay: isAllDay(evt),
+            });
+          }
+        }
+      }
+    }
+
+    // Also check for RECURRENCE-ID overrides (modified occurrences of recurring events)
+    // node-ical handles these as separate VEVENT entries with recurrenceid set
 
     // Sort by start time
     todayEvents.sort((a, b) => a.start.localeCompare(b.start));
@@ -36,111 +108,27 @@ export default async function handler(req, res) {
   }
 }
 
-function parseICS(text) {
-  const events = [];
-  const lines = unfoldLines(text);
-  let inEvent = false;
-  let event = {};
-
-  for (const line of lines) {
-    if (line === 'BEGIN:VEVENT') {
-      inEvent = true;
-      event = {};
-    } else if (line === 'END:VEVENT') {
-      inEvent = false;
-      if (event.summary && event.dtstart) {
-        events.push({
-          summary: event.summary,
-          start: parseICSDate(event.dtstart, event.tzid),
-          end: event.dtend ? parseICSDate(event.dtend, event.tzid) : null,
-          location: event.location || null,
-          allDay: event.allDay || false,
-        });
-      }
-    } else if (inEvent) {
-      const colonIdx = line.indexOf(':');
-      if (colonIdx === -1) continue;
-      const keyPart = line.slice(0, colonIdx);
-      const value = line.slice(colonIdx + 1);
-      const keyName = keyPart.split(';')[0].toUpperCase();
-
-      // Extract TZID from params if present
-      const tzMatch = keyPart.match(/TZID=([^;:]+)/i);
-
-      if (keyName === 'SUMMARY') {
-        event.summary = unescapeICS(value);
-      } else if (keyName === 'DTSTART') {
-        event.dtstart = value;
-        if (tzMatch) event.tzid = tzMatch[1];
-        // All-day events use DATE format (8 chars, no T)
-        if (keyPart.includes('VALUE=DATE') || (value.length === 8 && !value.includes('T'))) {
-          event.allDay = true;
-        }
-      } else if (keyName === 'DTEND') {
-        event.dtend = value;
-      } else if (keyName === 'LOCATION') {
-        event.location = unescapeICS(value);
-      }
+function isAllDay(evt) {
+  if (evt.datetype === 'date') return true;
+  // All-day: start and end differ by exact multiples of 24h with midnight times
+  if (evt.start && evt.end) {
+    const s = evt.start instanceof Date ? evt.start : new Date(evt.start);
+    const e = evt.end instanceof Date ? evt.end : new Date(evt.end);
+    if (s.getUTCHours() === 0 && s.getUTCMinutes() === 0 &&
+        e.getUTCHours() === 0 && e.getUTCMinutes() === 0) {
+      return true;
     }
   }
-  return events;
+  return false;
 }
 
-function unfoldLines(text) {
-  // iCal spec: lines starting with space or tab are continuations
-  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-    .replace(/\n[ \t]/g, '')
-    .split('\n')
-    .map(l => l.trim())
-    .filter(Boolean);
-}
-
-function unescapeICS(str) {
-  return str.replace(/\\n/gi, ' ').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
-}
-
-function parseICSDate(value, tzid) {
-  // Formats: 20261006T140000Z, 20261006T140000, 20261006
-  const clean = value.replace(/[^0-9TZ]/g, '');
-  if (clean.length === 8) {
-    // All-day: YYYYMMDD
-    return `${clean.slice(0,4)}-${clean.slice(4,6)}-${clean.slice(6,8)}`;
-  }
-  const y = clean.slice(0,4), m = clean.slice(4,6), d = clean.slice(6,8);
-  const h = clean.slice(9,11), mi = clean.slice(11,13), s = clean.slice(13,15);
-  const isUTC = clean.endsWith('Z');
-
-  if (isUTC) {
-    // Convert UTC to Denver time
-    const utcDate = new Date(`${y}-${m}-${d}T${h}:${mi}:${s}Z`);
-    return formatInTZ(utcDate, 'America/Denver');
-  }
-
-  // If TZID provided, construct date in that timezone
-  if (tzid) {
-    try {
-      const dateInTZ = new Date(`${y}-${m}-${d}T${h}:${mi}:${s}`);
-      // Create a date string assuming the value is in the given TZID
-      const formatted = new Intl.DateTimeFormat('en-CA', {
-        timeZone: tzid,
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: false
-      }).format(dateInTZ);
-      // We need the Denver equivalent
-      const utcMs = dateInTZ.getTime();
-      // Get offset for the TZID
-      const tzOffset = getTimezoneOffset(tzid, dateInTZ);
-      const denverOffset = getTimezoneOffset('America/Denver', dateInTZ);
-      const adjustedMs = utcMs + (tzOffset - denverOffset) * 60000;
-      return formatInTZ(new Date(adjustedMs), 'America/Denver');
-    } catch (e) {
-      // Fallback: treat as local
-    }
-  }
-
-  // Treat as Denver local time
-  return `${y}-${m}-${d}T${h}:${mi}:${s}`;
+function toDateInTZ(dateStr, timeStr, tz) {
+  // Create a Date object representing dateStr + timeStr in the given timezone
+  const d = new Date(`${dateStr}T${timeStr}`);
+  const utcStr = d.toLocaleString('en-US', { timeZone: 'UTC' });
+  const tzStr = d.toLocaleString('en-US', { timeZone: tz });
+  const offset = new Date(utcStr) - new Date(tzStr);
+  return new Date(d.getTime() + offset);
 }
 
 function formatInTZ(date, tz) {
@@ -148,15 +136,9 @@ function formatInTZ(date, tz) {
     timeZone: tz,
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false
+    hour12: false,
   }).formatToParts(date);
   const p = {};
-  parts.forEach(({ type, value }) => p[type] = value);
+  parts.forEach(({ type, value }) => (p[type] = value));
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
-}
-
-function getTimezoneOffset(tz, date) {
-  const utcStr = date.toLocaleString('en-US', { timeZone: 'UTC' });
-  const tzStr = date.toLocaleString('en-US', { timeZone: tz });
-  return (new Date(utcStr) - new Date(tzStr)) / 60000;
 }
