@@ -1602,7 +1602,7 @@ function showHorizons() {
   document.getElementById('today-view').classList.remove('active');
   document.getElementById('punch-view').classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
-  document.getElementById('period-label').textContent = 'Big Rocks - This Week';
+  document.getElementById('period-label').textContent = 'Horizons';
   document.getElementById('archive-fab').hidden = false;
   setActiveTab('horizons');
   renderBoard();
@@ -2811,7 +2811,7 @@ function setupArchiveDragTarget() {
   else if (startView === 'today') showToday();
   else if (startView === 'punch') showPunch();
   else if (startView === 'archive') showArchive();
-  else { document.getElementById('period-label').textContent = 'Big Rocks - This Week'; setActiveTab('horizons'); }
+  else { document.getElementById('period-label').textContent = 'Horizons'; setActiveTab('horizons'); }
 })();
 </script>
 
