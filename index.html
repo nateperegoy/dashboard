@@ -2191,6 +2191,10 @@ function showAddForm(btn, columnId) {
   document.querySelectorAll('.add-form').forEach(f => f.remove());
   document.querySelectorAll('.add-card-btn').forEach(b => b.hidden = false);
 
+  // Hide archive FAB so it doesn't overlap the form
+  const archiveFab = document.getElementById('archive-fab');
+  if (archiveFab) archiveFab.style.display = 'none';
+
   btn.hidden = true;
   const form = document.createElement('div');
   form.className = 'add-form';
@@ -2232,6 +2236,9 @@ function cancelAdd(el) {
   const btn = form.nextElementSibling;
   form.remove();
   if (btn) btn.hidden = false;
+  // Restore archive FAB
+  const archiveFab = document.getElementById('archive-fab');
+  if (archiveFab) archiveFab.style.display = '';
 }
 
 let _addingCard = false;
@@ -2254,6 +2261,9 @@ function submitAdd(el, columnId) {
   const addBtn = form.nextElementSibling;
   form.remove();
   if (addBtn) addBtn.hidden = false;
+  // Restore archive FAB
+  const archiveFab = document.getElementById('archive-fab');
+  if (archiveFab) archiveFab.style.display = '';
 
   state.cards.push({
     id: generateId(),
