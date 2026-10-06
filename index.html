@@ -897,31 +897,59 @@ body {
   margin: 0;
 }
 .punch-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
+  padding: 0;
   margin-bottom: 8px;
-  transition: opacity 0.2s, box-shadow 0.15s;
-}
-.punch-item:hover { box-shadow: var(--shadow-sm); }
-.punch-item.done { opacity: 0.45; }
-.punch-drag-handle {
   cursor: grab;
-  color: rgba(255,255,255,0.2);
-  font-size: 12px;
-  user-select: none;
-  flex-shrink: 0;
-  padding: 2px 0;
+  transition: box-shadow 0.15s, border-color 0.15s;
 }
-.punch-drag-handle:hover { color: rgba(255,255,255,0.45); }
-.punch-item.done .punch-item-text { text-decoration: line-through; }
-.punch-check {
-  width: 20px;
-  height: 20px;
+.punch-item:hover { box-shadow: var(--shadow-sm); border-color: var(--border); }
+.punch-item.done { opacity: 0.45; }
+.punch-item.done .punch-item-title { text-decoration: line-through; }
+.punch-item-main {
+  padding: 10px 12px 10px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  overflow: hidden;
+  min-width: 0;
+}
+.punch-item-body { flex: 1; min-width: 0; overflow: hidden; }
+.punch-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.punch-item-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 3px 0 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.punch-item-note:empty { display: none; }
+.punch-item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.punch-item:hover .punch-item-actions { opacity: 1; }
+.punch-item-check {
+  width: 16px;
+  height: 16px;
   border: 2px solid var(--border);
   border-radius: 50%;
   background: transparent;
@@ -930,41 +958,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 1px;
-  font-size: 12px;
+  margin-top: 2px;
+  font-size: 10px;
   color: transparent;
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
-.punch-check:hover { border-color: var(--accent); }
-.punch-item.done .punch-check {
+.punch-item-check:hover { border-color: var(--accent); }
+.punch-item.done .punch-item-check {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
-.punch-item-text {
-  flex: 1;
-  font-size: 14px;
-  line-height: 1.5;
-  word-break: break-word;
-  min-width: 0;
-}
-.punch-item-text[contenteditable="true"] {
-  outline: none;
-  border-bottom: 1px solid var(--accent);
-}
-.punch-item-delete {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 4px;
-  color: var(--text-muted);
-  font-size: 16px;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s;
-  flex-shrink: 0;
-}
-.punch-item:hover .punch-item-delete { opacity: 1; }
-.punch-item-delete:hover { color: #c44; }
 .punch-empty {
   text-align: center;
   padding: 40px 20px;
@@ -2325,21 +2329,24 @@ function renderPunch() {
     if (sectionItems.length === 0) {
       html += `<div class="punch-empty" style="padding:20px">No items yet</div>`;
     } else {
-      html += `<ul class="punch-list">`;
+      html += `<div class="punch-list">`;
       [...activeItems, ...doneItems].forEach(item => {
         html += `
-          <li class="punch-item ${item.done ? 'done' : ''}" data-punch-id="${item.id}">
-            <span class="punch-drag-handle">⠿</span>
-            <button class="punch-check" onclick="togglePunch('${item.id}')">${item.done ? '✓' : ''}</button>
-            <span class="punch-item-text" contenteditable="false"
-              onclick="this.contentEditable='true';this.focus()"
-              onblur="updatePunchText('${item.id}', this)"
-              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${esc(item.text)}</span>
-            <button class="punch-item-delete" onclick="deletePunch('${item.id}')" aria-label="Delete">&times;</button>
-          </li>
+          <div class="punch-item ${item.done ? 'done' : ''}" data-punch-id="${item.id}">
+            <div class="punch-item-main">
+              <button class="punch-item-check" onclick="togglePunch('${item.id}')">${item.done ? '✓' : ''}</button>
+              <div class="punch-item-body">
+                <div class="punch-item-title">${esc(item.text)}</div>
+                <div class="punch-item-note">${esc(item.note || '')}</div>
+              </div>
+              <div class="punch-item-actions">
+                <button class="card-edit-btn" onclick="openPunchMenu('${item.id}', this)" aria-label="Edit idea"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+              </div>
+            </div>
+          </div>
         `;
       });
-      html += `</ul>`;
+      html += `</div>`;
 
       html += `
         <div class="punch-counts">
@@ -2360,7 +2367,7 @@ function renderPunch() {
       animation: 200,
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
-      handle: '.punch-drag-handle',
+      handle: '.punch-item-body',
       draggable: '.punch-item',
       onEnd: function(evt) {
         const listEl = evt.to;
@@ -2402,19 +2409,98 @@ function togglePunch(id) {
   renderPunch();
 }
 
-function updatePunchText(id, el) {
-  el.contentEditable = 'false';
-  const item = punchState.items.find(i => i.id === id);
-  if (!item) return;
-  const text = el.textContent.trim();
-  if (text) { item.text = text; } else { el.textContent = item.text; }
-  savePunch();
-}
-
 function deletePunch(id) {
   punchState.items = punchState.items.filter(i => i.id !== id);
   savePunch();
   renderPunch();
+}
+
+function duplicatePunch(id) {
+  const item = punchState.items.find(i => i.id === id);
+  if (!item) return;
+  const dup = { id: generateId(), text: item.text, note: item.note || '', done: false, section: item.section, created: Date.now() };
+  const idx = punchState.items.indexOf(item);
+  punchState.items.splice(idx + 1, 0, dup);
+  savePunch();
+  renderPunch();
+}
+
+function openPunchMenu(id, btnEl) {
+  closeCardMenu();
+  const item = punchState.items.find(i => i.id === id);
+  if (!item) return;
+
+  const rect = btnEl.getBoundingClientRect();
+  const overlay = document.createElement('div');
+  overlay.className = 'card-menu-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) closeCardMenu(); };
+
+  const menu = document.createElement('div');
+  menu.className = 'card-menu';
+  menu.style.visibility = 'hidden';
+  overlay.appendChild(menu);
+  document.body.appendChild(overlay);
+
+  menu.innerHTML = `
+    <div class="card-menu-section">Title</div>
+    <div class="card-menu-title">
+      <input type="text" value="${esc(item.text)}" placeholder="Idea title…" id="punch-menu-title" />
+    </div>
+    <div class="card-menu-section">Note</div>
+    <div class="card-menu-note">
+      <input type="text" value="${esc(item.note || '')}" placeholder="Add a note…" id="punch-menu-note" />
+    </div>
+    <div class="card-menu-divider"></div>
+    <div class="card-menu-item" data-action="duplicate">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Duplicate
+    </div>
+    <div class="card-menu-item danger" data-action="delete">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      Delete
+    </div>
+  `;
+
+  const menuW = menu.offsetWidth || 220;
+  const menuH = menu.offsetHeight;
+  let top = rect.bottom + 4;
+  let left = rect.right - menuW;
+  if (left < 8) left = 8;
+  if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+  if (top + menuH > window.innerHeight - 8) top = rect.top - menuH - 4;
+  if (top < 8) top = 8;
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
+  menu.style.visibility = '';
+
+  const titleInput = menu.querySelector('#punch-menu-title');
+  const saveTitle = () => {
+    const text = titleInput.value.trim();
+    if (text && text !== item.text) {
+      item.text = text;
+      savePunch();
+      document.querySelectorAll(`.punch-item[data-punch-id="${id}"] .punch-item-title`).forEach(el => el.textContent = item.text);
+    }
+  };
+  titleInput.addEventListener('blur', saveTitle);
+  titleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); titleInput.blur(); } });
+
+  const noteInput = menu.querySelector('#punch-menu-note');
+  const saveNote = () => {
+    item.note = noteInput.value.trim();
+    savePunch();
+    document.querySelectorAll(`.punch-item[data-punch-id="${id}"] .punch-item-note`).forEach(el => el.textContent = item.note);
+  };
+  noteInput.addEventListener('blur', saveNote);
+  noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); noteInput.blur(); } });
+
+  menu.querySelectorAll('.card-menu-item').forEach(mi => {
+    mi.addEventListener('click', () => {
+      const action = mi.dataset.action;
+      if (action === 'duplicate') { closeCardMenu(); duplicatePunch(id); }
+      else if (action === 'delete') { closeCardMenu(); deletePunch(id); }
+    });
+  });
 }
 
 function clearDonePunchSection(sectionId) {
