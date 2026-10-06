@@ -18,6 +18,12 @@ export default async function handler(req, res) {
     const icsText = await resp.text();
     const rawEvents = parseICS(icsText);
 
+    // Hidden events — comma-separated substrings in env var, case-insensitive
+    const hideList = (process.env.CALENDAR_HIDE_EVENTS || '')
+      .split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
+
     // Today's boundaries in Denver
     const now = new Date();
     const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
@@ -25,6 +31,11 @@ export default async function handler(req, res) {
     const todayEvents = [];
 
     for (const evt of rawEvents) {
+      // Skip hidden events
+      if (hideList.length && evt.summary) {
+        const lower = evt.summary.toLowerCase();
+        if (hideList.some(h => lower.includes(h))) continue;
+      }
       // If recurring, expand and check for today
       if (evt.rruleRaw) {
         const occurrences = expandRRule(evt, todayStr);
