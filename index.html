@@ -905,6 +905,7 @@ body {
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
   margin-bottom: 8px;
+  cursor: grab;
   transition: opacity 0.2s, box-shadow 0.15s;
 }
 .punch-item:hover { box-shadow: var(--shadow-sm); }
@@ -2343,6 +2344,26 @@ function renderPunch() {
   });
 
   view.innerHTML = html;
+
+  // Make punch lists draggable for reordering
+  view.querySelectorAll('.punch-list').forEach(list => {
+    new Sortable(list, {
+      animation: 200,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      handle: '.punch-item',
+      draggable: '.punch-item',
+      onEnd: function(evt) {
+        const listEl = evt.to;
+        const orderedIds = Array.from(listEl.querySelectorAll('.punch-item')).map(el => el.dataset.punchId);
+        // Rebuild the items array with this section's items in the new order
+        const sectionItems = orderedIds.map(id => punchState.items.find(i => i.id === id)).filter(Boolean);
+        const otherItems = punchState.items.filter(i => !orderedIds.includes(i.id));
+        punchState.items = [...otherItems, ...sectionItems];
+        savePunch();
+      },
+    });
+  });
 }
 
 function addPunchItem(sectionId) {
