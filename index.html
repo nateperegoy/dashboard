@@ -2647,7 +2647,10 @@ function renderTodoistSection() {
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
 
-  container.innerHTML = todoistTasks.map(t => {
+  // Sort by priority: P1 (priority=4) first, P4 (priority=1) last
+  const sortedTasks = [...todoistTasks].sort((a, b) => (b.priority || 1) - (a.priority || 1));
+
+  container.innerHTML = sortedTasks.map(t => {
     // Todoist REST API: due.date, priority is 1-4 (4=most urgent)
     const dueDate = t.due ? (t.due.date || '').slice(0, 10) : null;
     const isOverdue = dueDate && dueDate < today;
