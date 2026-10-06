@@ -1169,16 +1169,16 @@ body {
 <div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
   <div class="settings-panel">
     <div class="header-row" style="margin-bottom:4px">
-      <h2>Labels</h2>
+      <h2>Focus Areas</h2>
       <button class="btn-icon" onclick="closeSettings()" aria-label="Close" style="font-size:20px">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px">
-      Define your labels here. Each gets a color bar on its cards.
+      Define your focus areas here. Each gets a color bar on its cards.
     </p>
     <div id="project-list"></div>
-    <button class="btn" onclick="addProject()" style="margin-top:12px">+ Add label</button>
+    <button class="btn" onclick="addProject()" style="margin-top:12px">+ Add focus area</button>
     <h3 style="margin-top:24px">Danger zone</h3>
-    <button class="btn" onclick="showConfirmModal('Clear all cards and labels? This cannot be undone.', clearAll)" style="color:#c44">Reset everything</button>
+    <button class="btn" onclick="showConfirmModal('Clear all cards and focus areas? This cannot be undone.', clearAll)" style="color:#c44">Reset everything</button>
   </div>
 </div>
 
@@ -1722,7 +1722,7 @@ function showAddForm(btn, columnId) {
   const form = document.createElement('div');
   form.className = 'add-form';
   form.innerHTML = `
-    <input type="text" placeholder="Project or focus area…" autofocus id="add-input">
+    <input type="text" placeholder="What are you working on?" autofocus id="add-input">
     <div class="color-picker-row" id="color-picker" style="margin-top:6px">
       ${state.projects.map(p => `
         <div class="project-option" data-project-id="${p.id}" onclick="selectProject(this)"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>
@@ -1803,7 +1803,7 @@ function renderProjectList() {
           <div class="color-dot ${p.color === c ? 'active' : ''}" style="background:${c}" onclick="setProjectColor('${p.id}','${c}',this)"></div>
         `).join('')}
       </div>
-      <input type="text" value="${esc(p.name)}" onchange="setProjectName('${p.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur()}" placeholder="Label name">
+      <input type="text" value="${esc(p.name)}" onchange="setProjectName('${p.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur()}" placeholder="Focus area name">
       ${state.projects.length > 1 ? `<button class="btn-icon" onclick="removeProject('${p.id}')" aria-label="Remove" title="Remove label">&times;</button>` : ''}
     </div>
   `).join('');
