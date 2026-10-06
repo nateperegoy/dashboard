@@ -1761,18 +1761,23 @@ function cancelAdd(el) {
   if (btn) btn.hidden = false;
 }
 
+let _addingCard = false;
 function submitAdd(el, columnId) {
+  if (_addingCard) return;
+  _addingCard = true;
+
   const form = el.closest('.add-form');
   const input = form.querySelector('#add-input');
   const title = input.value.trim();
-  if (!title) { input.focus(); return; }
-
-  // Disable button to prevent double-clicks
-  const addBtn = form.querySelector('.btn-primary');
-  if (addBtn) addBtn.disabled = true;
+  if (!title) { input.focus(); _addingCard = false; return; }
 
   const activeOption = form.querySelector('.project-option.active');
   const projectId = activeOption ? activeOption.dataset.projectId : state.projects[0]?.id;
+
+  // Remove form from DOM before re-rendering
+  const addBtn = form.nextElementSibling;
+  form.remove();
+  if (addBtn) addBtn.hidden = false;
 
   state.cards.push({
     id: generateId(),
@@ -1791,6 +1796,8 @@ function submitAdd(el, columnId) {
   else if (currentView === 'today') showToday();
   else if (currentView === 'punch') renderPunch();
   else renderBoard();
+
+  _addingCard = false;
 }
 
 // ── Settings ──
