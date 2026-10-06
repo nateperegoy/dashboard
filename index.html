@@ -126,8 +126,8 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .app-header .btn svg {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
 }
 .app-header .btn.settings-btn {
@@ -1873,8 +1873,7 @@ function openCardMenu(cardId, btnEl) {
     if (text && text !== card.title) {
       card.title = text;
       saveState();
-      const cardEl = document.querySelector(`.card[data-card-id="${cardId}"] .card-title`);
-      if (cardEl) cardEl.textContent = card.title;
+      document.querySelectorAll(`.card[data-card-id="${cardId}"] .card-title`).forEach(el => el.textContent = card.title);
     }
   };
   titleInput.addEventListener('blur', saveTitle);
@@ -1884,8 +1883,7 @@ function openCardMenu(cardId, btnEl) {
   const saveNote = () => {
     card.note = noteInput.value.trim();
     saveState();
-    const cardEl = document.querySelector(`.card[data-card-id="${cardId}"] .card-note`);
-    if (cardEl) cardEl.textContent = card.note;
+    document.querySelectorAll(`.card[data-card-id="${cardId}"] .card-note`).forEach(el => el.textContent = card.note);
   };
   noteInput.addEventListener('blur', saveNote);
   noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); noteInput.blur(); } });
@@ -1896,8 +1894,7 @@ function openCardMenu(cardId, btnEl) {
       saveState();
       menu.querySelectorAll('.project-option').forEach(d => d.classList.remove('active'));
       opt.classList.add('active');
-      const bar = document.querySelector(`.card[data-card-id="${cardId}"] .card-color-bar`);
-      if (bar) bar.style.background = getProjectColor(card.projectId);
+      document.querySelectorAll(`.card[data-card-id="${cardId}"] .card-color-bar`).forEach(el => el.style.background = getProjectColor(card.projectId));
     });
   });
 
