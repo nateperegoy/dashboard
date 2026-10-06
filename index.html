@@ -652,6 +652,19 @@ body {
   min-height: calc(100vh - 80px);
 }
 .week-view.active { display: flex; }
+.week-header {
+  margin-bottom: 24px;
+}
+.week-header-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+.week-header-date {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
 .week-rocks-row {
   background: var(--accent-light);
   border: 1px solid var(--border-light);
@@ -2131,7 +2144,20 @@ function renderWeek() {
 
   const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id);
 
+  // Compute week date range for header
+  const _now = new Date();
+  const _day = _now.getDay();
+  const _mon = new Date(_now);
+  _mon.setDate(_now.getDate() - (_day === 0 ? 6 : _day - 1));
+  const _fri = new Date(_mon); _fri.setDate(_mon.getDate() + 4);
+  const _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const _weekRange = _mNames[_mon.getMonth()] + ' ' + _mon.getDate() + ' – ' + _mNames[_fri.getMonth()] + ' ' + _fri.getDate() + ', ' + _fri.getFullYear();
+
   weekView.innerHTML = `
+    <div class="week-header">
+      <h1 class="week-header-title">This Week</h1>
+      <p class="week-header-date">${_weekRange}</p>
+    </div>
     <div class="week-rocks-row">
       <div class="week-rocks-header">
         <div>
@@ -2242,7 +2268,7 @@ function showToday() {
       <div>
         <h1 class="today-day-name">${dayName}</h1>
         <p class="today-date-label">${dateStr}</p>
-        <div class="today-section-label" style="margin-top:20px">Big Rocks - Today</div>
+        <div class="today-section-label" style="margin-top:20px">Today</div>
       </div>
     </div>
   `;
@@ -2286,7 +2312,7 @@ function showToday() {
   document.getElementById('week-view').classList.remove('active');
   punch.classList.remove('active');
   view.classList.add('active');
-  document.getElementById('period-label').textContent = 'Big Rocks - Today';
+  document.getElementById('period-label').textContent = 'Today';
   setActiveTab('today');
 
   // Fetch Todoist tasks
