@@ -2692,8 +2692,10 @@ function renderTodoistSection() {
     const bEl = document.querySelector(`.todoist-task[data-task-id="${b.id}"]`);
     const aCompleted = aEl ? aEl.classList.contains('completed') : false;
     const bCompleted = bEl ? bEl.classList.contains('completed') : false;
-    const aPinned = !aCompleted && pinnedNames.includes((a.content || '').toLowerCase());
-    const bPinned = !bCompleted && pinnedNames.includes((b.content || '').toLowerCase());
+    const aName = (a.content || '').toLowerCase();
+    const bName = (b.content || '').toLowerCase();
+    const aPinned = !aCompleted && pinnedNames.some(n => aName.includes(n));
+    const bPinned = !bCompleted && pinnedNames.some(n => bName.includes(n));
     if (aPinned !== bPinned) return aPinned ? -1 : 1;
     return (b.priority || 1) - (a.priority || 1);
   });
