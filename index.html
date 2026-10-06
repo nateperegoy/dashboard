@@ -768,6 +768,18 @@ body {
   letter-spacing: 0.04em;
   font-weight: 600;
 }
+.today-section-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin: 20px 0 8px;
+  padding: 0 2px;
+}
+.today-section-label:first-of-type {
+  margin-top: 0;
+}
 .today-empty {
   text-align: center;
   padding: 60px 20px;
@@ -1991,7 +2003,9 @@ function showToday() {
   const dayName = dayNames[now.getDay()];
   const dateStr = months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
 
-  const cards = todayCol ? state.cards.filter(c => c.column === todayCol) : [];
+  // Big Rocks show every day; day-specific cards show when there's a matching column
+  const rockCards = state.cards.filter(c => c.column === 'tw-rocks');
+  const dayCards = todayCol ? state.cards.filter(c => c.column === todayCol) : [];
 
   let html = `
     <div class="today-header">
@@ -2003,8 +2017,26 @@ function showToday() {
     </div>
   `;
 
-  if (cards.length > 0) {
-    html += cards.map(c => {
+  if (rockCards.length > 0) {
+    html += `<div class="today-section-label">Big Rocks</div>`;
+    html += rockCards.map(c => {
+      const color = getProjectColor(c.projectId);
+      const projName = getProjectName(c.projectId);
+      return `
+        <div class="today-card">
+          <div class="today-card-bar" style="background:${color}"></div>
+          <div class="today-card-title">${esc(c.title)}</div>
+          ${c.note ? `<div class="today-card-note">${esc(c.note)}</div>` : ''}
+          <div class="today-card-project">${esc(projName)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  if (dayCards.length > 0) {
+    const dayLabel = THIS_WEEK_DAYS.find(d => d.id === todayCol)?.label || 'Today';
+    html += `<div class="today-section-label">${dayLabel}</div>`;
+    html += dayCards.map(c => {
       const color = getProjectColor(c.projectId);
       const projName = getProjectName(c.projectId);
       return `
