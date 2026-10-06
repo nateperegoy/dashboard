@@ -1712,12 +1712,12 @@ function showAddForm(btn, columnId) {
   form.className = 'add-form';
   form.innerHTML = `
     <input type="text" placeholder="Project or focus area…" autofocus id="add-input">
+    <div class="color-picker-row" id="color-picker" style="margin-top:6px">
+      ${state.projects.map(p => `
+        <div class="project-option" data-project-id="${p.id}" onclick="selectProject(this)"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>
+      `).join('')}
+    </div>
     <div class="add-form-row">
-      <div class="color-picker-row" id="color-picker">
-        ${state.projects.map(p => `
-          <div class="project-option" data-project-id="${p.id}" onclick="selectProject(this)"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>
-        `).join('')}
-      </div>
       <div style="flex:1"></div>
       <button class="btn" onclick="cancelAdd(this)" style="font-size:12px;padding:4px 10px">Cancel</button>
       <button class="btn btn-primary" onclick="submitAdd(this, '${columnId}')" style="font-size:12px;padding:4px 10px">Add</button>
