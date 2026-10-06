@@ -755,11 +755,169 @@ body {
 /* Today view */
 .today-view {
   display: none;
-  max-width: 600px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 20px 16px 40px;
 }
 .today-view.active { display: block; }
+.today-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 32px;
+  align-items: start;
+}
+@media (max-width: 800px) {
+  .today-layout { grid-template-columns: 1fr; }
+  .today-calendar-col { order: -1; }
+}
+.today-tasks-col { min-width: 0; }
+.today-calendar-col { min-width: 0; }
+.today-calendar {
+  position: sticky;
+  top: 20px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.today-calendar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-light);
+}
+.today-calendar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  flex-shrink: 0;
+}
+.today-calendar-icon svg { width: 11px; height: 11px; }
+.today-calendar-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+.today-calendar-body {
+  position: relative;
+  overflow-y: auto;
+  max-height: calc(100vh - 140px);
+}
+.cal-slot {
+  display: flex;
+  min-height: 32px;
+  border-bottom: 1px solid var(--border-light);
+  position: relative;
+}
+.cal-slot.half-hour {
+  border-bottom: 1px dashed color-mix(in srgb, var(--border-light) 50%, transparent);
+}
+.cal-slot-time {
+  width: 48px;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 4px 8px 0 8px;
+  text-align: right;
+  user-select: none;
+}
+.cal-slot-area {
+  flex: 1;
+  min-height: 32px;
+  position: relative;
+  padding: 2px 4px;
+}
+.cal-slot-area.drag-over {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.cal-event {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  z-index: 2;
+  pointer-events: none;
+}
+.cal-event-time {
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+.cal-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  background: color-mix(in srgb, var(--card-tint, var(--accent)) 10%, var(--surface));
+  border-left: 3px solid var(--card-tint, var(--accent));
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  z-index: 3;
+  cursor: grab;
+}
+.cal-block:hover {
+  background: color-mix(in srgb, var(--card-tint, var(--accent)) 16%, var(--surface));
+}
+.cal-block-remove {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cal-block:hover .cal-block-remove { opacity: 1; }
+.cal-block-remove:hover { color: var(--text); }
+.cal-now-line {
+  position: absolute;
+  left: 48px;
+  right: 0;
+  height: 2px;
+  background: #e44332;
+  z-index: 10;
+  pointer-events: none;
+}
+.cal-now-line::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e44332;
+}
+.cal-loading {
+  padding: 24px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
 .today-header {
   display: flex;
   align-items: center;
@@ -2346,7 +2504,9 @@ function showToday() {
         <p class="today-date-label">${dateStr}</p>
       </div>
     </div>
-    <div class="today-section-label"><span class="today-rocks-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="none"><path d="M2.5 12.5C2.5 12.5 3 10 4.5 8.5C5.5 7.5 6 6.5 6.5 5C7 4 8 3 9 3.5C10 4 10.5 4 11.5 5C12.5 6 13 8 13.5 9.5C14 11 13.5 12.5 13.5 12.5Z" fill="currentColor" opacity="0.3"/><path d="M2.5 12.5C2.5 12.5 3 10 4.5 8.5C5.5 7.5 6 6.5 6.5 5C7 4 8 3 9 3.5C10 4 10.5 4 11.5 5C12.5 6 13 8 13.5 9.5C14 11 13.5 12.5 13.5 12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 9.5C5.5 8.5 7 8 8 8.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" opacity="0.5"/><path d="M9.5 6.5C10 7 11 7.5 11.5 9" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" opacity="0.5"/></svg></span>Today's Big Rocks</div>
+    <div class="today-layout">
+      <div class="today-tasks-col">
+        <div class="today-section-label"><span class="today-rocks-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="none"><path d="M2.5 12.5C2.5 12.5 3 10 4.5 8.5C5.5 7.5 6 6.5 6.5 5C7 4 8 3 9 3.5C10 4 10.5 4 11.5 5C12.5 6 13 8 13.5 9.5C14 11 13.5 12.5 13.5 12.5Z" fill="currentColor" opacity="0.3"/><path d="M2.5 12.5C2.5 12.5 3 10 4.5 8.5C5.5 7.5 6 6.5 6.5 5C7 4 8 3 9 3.5C10 4 10.5 4 11.5 5C12.5 6 13 8 13.5 9.5C14 11 13.5 12.5 13.5 12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 9.5C5.5 8.5 7 8 8 8.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" opacity="0.5"/><path d="M9.5 6.5C10 7 11 7.5 11.5 9" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" opacity="0.5"/></svg></span>Today's Big Rocks</div>
   `;
 
   if (dayCards.length > 0) {
@@ -2355,7 +2515,7 @@ function showToday() {
       const color = getProjectColor(c.projectId);
       const projName = getProjectName(c.projectId);
       return `
-        <div class="today-card" data-card-id="${c.id}" style="--card-tint:${color}">
+        <div class="today-card" draggable="true" data-card-id="${c.id}" data-drag-type="card" data-drag-title="${esc(c.title)}" data-drag-color="${color}" style="--card-tint:${color}">
           <div class="today-card-bar" style="background:${color}"></div>
           <div class="today-card-title">${esc(c.title)}</div>
           ${c.note ? `<div class="today-card-note">${esc(c.note)}</div>` : ''}
@@ -2374,14 +2534,27 @@ function showToday() {
   }
 
   html += `
-    <div class="todoist-section">
-      <div class="todoist-header">
-        <div class="todoist-logo">✓</div>
-        <span class="todoist-header-title">#work &amp; today</span>
-        <a href="https://app.todoist.com/app/task/add" target="_blank" rel="noopener" class="todoist-add-btn">+ Add</a>
+        <div class="todoist-section">
+          <div class="todoist-header">
+            <div class="todoist-logo">✓</div>
+            <span class="todoist-header-title">#work &amp; today</span>
+            <a href="https://app.todoist.com/app/task/add" target="_blank" rel="noopener" class="todoist-add-btn">+ Add</a>
+          </div>
+          <div id="todoist-container"></div>
+          <div class="todoist-footer">Read and complete here · Add and manage in Todoist</div>
+        </div>
       </div>
-      <div id="todoist-container"></div>
-      <div class="todoist-footer">Read and complete here · Add and manage in Todoist</div>
+      <div class="today-calendar-col">
+        <div class="today-calendar">
+          <div class="today-calendar-header">
+            <div class="today-calendar-icon"><svg viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="2.5" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="1" y1="5" x2="11" y2="5" stroke="currentColor" stroke-width="1"/><line x1="4" y1="1" x2="4" y2="3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="8" y1="1" x2="8" y2="3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+            <span class="today-calendar-title">Schedule</span>
+          </div>
+          <div class="today-calendar-body" id="today-calendar-body">
+            <div class="cal-loading">Loading calendar…</div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -2414,9 +2587,270 @@ function showToday() {
     });
   }
 
+  // Set up drag from tasks to calendar
+  setupTaskDragToCalendar(view);
+
+  // Render calendar and fetch events
+  renderCalendarSlots();
+  fetchCalendarEvents();
+
   // Fetch Todoist tasks
   fetchTodoistTasks();
   todoistInterval = setInterval(fetchTodoistTasks, 60000);
+}
+
+// ── Calendar (Today View) ──
+const CAL_START_HOUR = 6;
+const CAL_END_HOUR = 20; // 8pm
+const CAL_SLOT_MIN = 30;
+const TIME_BLOCKS_KEY = 'work-dashboard-time-blocks';
+let calendarEvents = [];
+
+function getTimeBlocks() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(TIME_BLOCKS_KEY));
+    if (!stored) return [];
+    // Only return today's blocks
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+    return (stored[todayStr] || []);
+  } catch(e) { return []; }
+}
+
+function saveTimeBlocks(blocks) {
+  try {
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+    const stored = JSON.parse(localStorage.getItem(TIME_BLOCKS_KEY) || '{}');
+    stored[todayStr] = blocks;
+    // Clean up old days (keep last 7)
+    const keys = Object.keys(stored).sort();
+    while (keys.length > 7) { delete stored[keys.shift()]; }
+    localStorage.setItem(TIME_BLOCKS_KEY, JSON.stringify(stored));
+  } catch(e) {}
+}
+
+function addTimeBlock(slotTime, title, color, sourceType, sourceId) {
+  const blocks = getTimeBlocks();
+  // Remove existing block for this source to avoid duplicates
+  const filtered = blocks.filter(b => !(b.sourceType === sourceType && b.sourceId === sourceId));
+  filtered.push({ slotTime, title, color, sourceType, sourceId, duration: 30 });
+  saveTimeBlocks(filtered);
+  renderCalendarSlots();
+}
+
+function removeTimeBlock(sourceType, sourceId) {
+  const blocks = getTimeBlocks().filter(b => !(b.sourceType === sourceType && b.sourceId === sourceId));
+  saveTimeBlocks(blocks);
+  renderCalendarSlots();
+}
+
+function renderCalendarSlots() {
+  const body = document.getElementById('today-calendar-body');
+  if (!body) return;
+
+  const blocks = getTimeBlocks();
+  let html = '';
+
+  for (let h = CAL_START_HOUR; h < CAL_END_HOUR; h++) {
+    for (let m = 0; m < 60; m += CAL_SLOT_MIN) {
+      const timeStr = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+      const isHour = m === 0;
+      const displayTime = isHour ? formatHour(h) : '';
+      html += `
+        <div class="cal-slot ${isHour ? '' : 'half-hour'}" data-time="${timeStr}">
+          <div class="cal-slot-time">${displayTime}</div>
+          <div class="cal-slot-area" data-slot-time="${timeStr}"></div>
+        </div>
+      `;
+    }
+  }
+
+  body.innerHTML = html;
+
+  // Render calendar events (from iCal)
+  calendarEvents.forEach(evt => {
+    if (evt.allDay) return;
+    const startMin = timeToMinutes(evt.start.slice(11, 16));
+    const endMin = evt.end ? timeToMinutes(evt.end.slice(11, 16)) : startMin + 30;
+    placeCalendarBlock(body, startMin, endMin, evt.summary, 'cal-event', null, evt.start.slice(11,16));
+  });
+
+  // Render time blocks (user-scheduled tasks)
+  blocks.forEach(block => {
+    const startMin = timeToMinutes(block.slotTime);
+    const endMin = startMin + (block.duration || 30);
+    placeCalendarBlock(body, startMin, endMin, block.title, 'cal-block', block, null);
+  });
+
+  // Now-line
+  const now = new Date();
+  const nowH = parseInt(now.toLocaleString('en-US', { timeZone: 'America/Denver', hour: 'numeric', hour12: false }));
+  const nowM = parseInt(now.toLocaleString('en-US', { timeZone: 'America/Denver', minute: 'numeric' }));
+  const nowMin = nowH * 60 + nowM;
+  const calStartMin = CAL_START_HOUR * 60;
+  const calEndMin = CAL_END_HOUR * 60;
+  if (nowMin >= calStartMin && nowMin < calEndMin) {
+    const slotH = 32; // slot height in px
+    const totalSlots = (CAL_END_HOUR - CAL_START_HOUR) * (60 / CAL_SLOT_MIN);
+    const pxPerMin = (totalSlots * slotH) / (calEndMin - calStartMin);
+    const topPx = (nowMin - calStartMin) * pxPerMin;
+    const nowLine = document.createElement('div');
+    nowLine.className = 'cal-now-line';
+    nowLine.style.top = topPx + 'px';
+    body.appendChild(nowLine);
+
+    // Scroll now-line into view
+    body.scrollTop = Math.max(0, topPx - 100);
+  }
+
+  // Set up drop targets
+  setupCalendarDropTargets(body);
+}
+
+function placeCalendarBlock(body, startMin, endMin, title, className, block, timeLabel) {
+  const calStartMin = CAL_START_HOUR * 60;
+  const calEndMin = CAL_END_HOUR * 60;
+  if (startMin >= calEndMin || endMin <= calStartMin) return;
+
+  const clampStart = Math.max(startMin, calStartMin);
+  const clampEnd = Math.min(endMin, calEndMin);
+  const slotH = 32;
+  const pxPerMin = slotH / CAL_SLOT_MIN;
+  const topPx = (clampStart - calStartMin) * pxPerMin;
+  const heightPx = Math.max((clampEnd - clampStart) * pxPerMin - 2, 18);
+
+  const el = document.createElement('div');
+  el.className = className;
+  el.style.top = topPx + 'px';
+  el.style.height = heightPx + 'px';
+  el.style.position = 'absolute';
+  el.style.left = '52px';
+  el.style.right = '4px';
+
+  if (block && block.color) {
+    el.style.setProperty('--card-tint', block.color);
+    el.style.borderLeftColor = block.color;
+    el.style.background = `color-mix(in srgb, ${block.color} 10%, var(--surface))`;
+  }
+
+  let inner = `<span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(title)}</span>`;
+  if (timeLabel) {
+    const endT = minutesToTime(endMin);
+    inner += `<div class="cal-event-time">${formatTime12(timeLabel)} – ${formatTime12(endT)}</div>`;
+  }
+  if (block) {
+    inner += `<button class="cal-block-remove" onclick="removeTimeBlock('${block.sourceType}','${block.sourceId}')" title="Remove">×</button>`;
+  }
+  el.innerHTML = inner;
+
+  // Make blocks draggable to reschedule
+  if (block) {
+    el.draggable = true;
+    el.dataset.dragType = block.sourceType;
+    el.dataset.dragTitle = block.title;
+    el.dataset.dragColor = block.color || '';
+    el.dataset.dragId = block.sourceId;
+    el.addEventListener('dragstart', function(e) {
+      e.dataTransfer.setData('text/plain', JSON.stringify({
+        type: block.sourceType, id: block.sourceId, title: block.title, color: block.color
+      }));
+      e.dataTransfer.effectAllowed = 'move';
+    });
+  }
+
+  body.appendChild(el);
+}
+
+function setupCalendarDropTargets(body) {
+  const slots = body.querySelectorAll('.cal-slot-area');
+  slots.forEach(slot => {
+    slot.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      slot.classList.add('drag-over');
+    });
+    slot.addEventListener('dragleave', function() {
+      slot.classList.remove('drag-over');
+    });
+    slot.addEventListener('drop', function(e) {
+      e.preventDefault();
+      slot.classList.remove('drag-over');
+      try {
+        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+        const slotTime = slot.dataset.slotTime;
+        addTimeBlock(slotTime, data.title, data.color || '', data.type, data.id);
+      } catch(err) {}
+    });
+  });
+}
+
+function setupTaskDragToCalendar(view) {
+  // Enable HTML5 drag on today-cards
+  view.querySelectorAll('.today-card[draggable]').forEach(card => {
+    card.addEventListener('dragstart', function(e) {
+      e.dataTransfer.setData('text/plain', JSON.stringify({
+        type: 'card', id: card.dataset.cardId,
+        title: card.dataset.dragTitle, color: card.dataset.dragColor
+      }));
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+  });
+
+  // Todoist tasks get drag handlers after they load (in renderTodoistSection)
+}
+
+function enableTodoistDragToCalendar() {
+  document.querySelectorAll('.todoist-task').forEach(task => {
+    task.draggable = true;
+    task.addEventListener('dragstart', function(e) {
+      const title = task.querySelector('.todoist-task-title')?.textContent || '';
+      e.dataTransfer.setData('text/plain', JSON.stringify({
+        type: 'todoist', id: task.dataset.taskId, title: title, color: ''
+      }));
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+  });
+}
+
+async function fetchCalendarEvents() {
+  const body = document.getElementById('today-calendar-body');
+  try {
+    const resp = await fetch('/api/calendar');
+    if (!resp.ok) {
+      // Calendar not configured — render slots without events
+      calendarEvents = [];
+      renderCalendarSlots();
+      return;
+    }
+    const data = await resp.json();
+    calendarEvents = data.events || [];
+    renderCalendarSlots();
+  } catch(e) {
+    calendarEvents = [];
+    renderCalendarSlots();
+  }
+}
+
+function timeToMinutes(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+function minutesToTime(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+function formatHour(h) {
+  if (h === 0 || h === 12) return (h === 0 ? '12' : '12') + (h < 12 ? 'a' : 'p');
+  return (h > 12 ? h - 12 : h) + (h >= 12 ? 'p' : 'a');
+}
+
+function formatTime12(t) {
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return h12 + ':' + String(m).padStart(2, '0') + ampm;
 }
 
 // ── Ideas View ──
@@ -2820,6 +3254,9 @@ function renderTodoistSection() {
       saveTodoistOrder(orderedIds);
     }
   });
+
+  // Enable drag-to-calendar for Todoist tasks
+  enableTodoistDragToCalendar();
 }
 
 // ── Migrate old state ──
