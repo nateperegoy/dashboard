@@ -1245,6 +1245,18 @@ body {
   pointer-events: none;
   transition: opacity 0.3s;
 }
+.todoist-task.completed {
+  opacity: 0.4;
+}
+.todoist-task.completed .todoist-task-title {
+  text-decoration: line-through;
+}
+.todoist-task.completed .todoist-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  pointer-events: none;
+}
 .todoist-check {
   width: 20px;
   height: 20px;
@@ -2570,8 +2582,10 @@ async function completeTodoistTask(taskId) {
       body: JSON.stringify({ taskId }),
     });
     if (resp.ok) {
-      // Re-fetch tasks after completing
-      setTimeout(fetchTodoistTasks, 500);
+      if (el) {
+        el.classList.remove('completing');
+        el.classList.add('completed');
+      }
     } else {
       if (el) el.classList.remove('completing');
     }
