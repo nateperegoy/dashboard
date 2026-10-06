@@ -2031,6 +2031,13 @@ function showToday() {
         </div>
       `;
     }).join('');
+  } else {
+    html += `
+      <div class="today-empty">
+        <div class="today-empty-icon">✓</div>
+        <div class="today-empty-text">Nothing on the board today</div>
+      </div>
+    `;
   }
 
   html += `
