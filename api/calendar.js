@@ -259,6 +259,7 @@ function getMonthInTZ(date, tz) {
 
 function parseICS(text) {
   const events = [];
+  const cancelledDates = {}; // uid -> [date strings] for cancelled recurring instances
   const lines = unfoldLines(text);
   let inEvent = false;
   let event = {};
@@ -269,7 +270,18 @@ function parseICS(text) {
       event = {};
     } else if (line === 'END:VEVENT') {
       inEvent = false;
-      if (event.summary && event.dtstart) {
+
+      // Skip cancelled events (deleted instances of recurring events)
+      if (event.status === 'CANCELLED') {
+        // Track this as a cancelled date for the parent recurring event
+        if (event.uid && event.recurrenceId) {
+          const cancelDate = parseICSDateStr(event.recurrenceId);
+          if (cancelDate) {
+            if (!cancelledDates[event.uid]) cancelledDates[event.uid] = [];
+            cancelledDates[event.uid].push(cancelDate);
+          }
+        }
+      } else if (event.summary && event.dtstart) {
         const startDate = parseICSDateToJS(event.dtstart, event.tzid);
         const endDate = event.dtend ? parseICSDateToJS(event.dtend, event.tzid) : null;
 
@@ -311,6 +323,10 @@ function parseICS(text) {
         event.location = unescapeICS(value);
       } else if (keyName === 'RRULE') {
         event.rruleRaw = value;
+      } else if (keyName === 'STATUS') {
+        event.status = value.toUpperCase().trim();
+      } else if (keyName === 'RECURRENCE-ID') {
+        event.recurrenceId = value;
       } else if (keyName === 'EXDATE') {
         if (!event.exdates) event.exdates = [];
         value.split(',').forEach(d => {
@@ -322,7 +338,23 @@ function parseICS(text) {
       }
     }
   }
+
+  // Merge cancelled recurring instances into their parent event's exdates
+  for (const evt of events) {
+    if (evt.uid && cancelledDates[evt.uid]) {
+      evt.exdates = [...evt.exdates, ...cancelledDates[evt.uid]];
+    }
+  }
+
   return events;
+}
+
+function parseICSDateStr(value) {
+  const clean = value.replace(/[^0-9T]/g, '');
+  if (clean.length >= 8) {
+    return `${clean.slice(0,4)}-${clean.slice(4,6)}-${clean.slice(6,8)}`;
+  }
+  return null;
 }
 
 function unfoldLines(text) {
