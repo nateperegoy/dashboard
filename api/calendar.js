@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     const icsText = await resp.text();
     const rawEvents = parseICS(icsText);
 
-    // Hidden events — comma-separated substrings in env var, case-insensitive
+    // Hidden events — comma-separated substrings in CALENDAR_HIDE_EVENTS env var
     const hideList = (process.env.CALENDAR_HIDE_EVENTS || '')
       .split(',')
       .map(s => s.trim().toLowerCase())
