@@ -1405,6 +1405,7 @@ let currentView = 'horizons';
 
 function setActiveTab(view) {
   currentView = view;
+  try { localStorage.setItem('work-dashboard-view', view); } catch(e) {}
   document.getElementById('tab-horizons').classList.toggle('active-tab', view === 'horizons');
   document.getElementById('tab-week').classList.toggle('active-tab', view === 'week');
   document.getElementById('tab-today').classList.toggle('active-tab', view === 'today');
@@ -2328,8 +2329,13 @@ function migrateState() {
   await loadPunch();
   migrateState();
   renderBoard();
-  document.getElementById('period-label').textContent = 'Big Rocks - This Week';
-  setActiveTab('horizons');
+
+  const savedView = (() => { try { return localStorage.getItem('work-dashboard-view'); } catch(e) { return null; } })();
+  const startView = ['horizons','week','today','punch'].includes(savedView) ? savedView : 'horizons';
+  if (startView === 'week') showWeek();
+  else if (startView === 'today') showToday();
+  else if (startView === 'punch') showPunch();
+  else { document.getElementById('period-label').textContent = 'Big Rocks - This Week'; setActiveTab('horizons'); }
 })();
 </script>
 
