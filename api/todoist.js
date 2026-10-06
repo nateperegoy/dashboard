@@ -30,7 +30,8 @@ export default async function handler(req, res) {
       });
 
       // 2. Fetch tasks per project (parallel) — much faster than fetching all tasks
-      const today = new Date().toISOString().slice(0, 10);
+      // Use user's timezone for accurate "today" boundary
+      const userToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
       const fetches = workIds.map(async (pid) => {
         let projectTasks = [];
         let cursor = null;
@@ -51,10 +52,13 @@ export default async function handler(req, res) {
       const results = await Promise.all(fetches);
       const allTasks = results.flat();
 
-      // 3. Filter: due today or overdue
+      // 3. Filter: due today or overdue (check both due.date and due.deadline)
       const tasks = allTasks.filter(t => {
         if (!t.due) return false;
-        return t.due.date <= today;
+        const dueDate = t.due.date || '';
+        // due.date can be YYYY-MM-DD or full datetime — take just the date part
+        const dateOnly = dueDate.slice(0, 10);
+        return dateOnly && dateOnly <= userToday;
       });
 
       return res.json({ tasks });

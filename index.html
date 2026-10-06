@@ -2270,11 +2270,11 @@ function renderTodoistSection() {
     return;
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
 
   container.innerHTML = todoistTasks.map(t => {
     // Todoist REST API: due.date, priority is 1-4 (4=most urgent)
-    const dueDate = t.due ? t.due.date : null;
+    const dueDate = t.due ? (t.due.date || '').slice(0, 10) : null;
     const isOverdue = dueDate && dueDate < today;
     // Map REST API priority (4=urgent) to display
     const p = t.priority || 1;
