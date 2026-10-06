@@ -770,10 +770,10 @@ body {
 }
 .today-section-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-weight: 800;
   margin: 20px 0 8px;
   padding: 0 2px;
 }
@@ -1428,7 +1428,7 @@ function showHorizons() {
   document.getElementById('week-view').classList.remove('active');
   document.getElementById('today-view').classList.remove('active');
   document.getElementById('punch-view').classList.remove('active');
-  document.getElementById('period-label').textContent = getQuarterLabel() + ' · Horizons';
+  document.getElementById('period-label').textContent = 'Big Rocks - This Week';
   setActiveTab('horizons');
   renderBoard();
 }
@@ -2003,9 +2003,9 @@ function showToday() {
   const dayName = dayNames[now.getDay()];
   const dateStr = months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
 
-  // Big Rocks show every day; day-specific cards show when there's a matching column
-  const rockCards = state.cards.filter(c => c.column === 'tw-rocks');
+  // Show day-specific cards from the week view (not Big Rocks)
   const dayCards = todayCol ? state.cards.filter(c => c.column === todayCol) : [];
+  const dayLabel = todayCol ? (THIS_WEEK_DAYS.find(d => d.id === todayCol)?.label || 'Today') : null;
 
   let html = `
     <div class="today-header">
@@ -2013,29 +2013,12 @@ function showToday() {
         <button class="today-back" onclick="showHorizons()">← Horizons</button>
         <h1 class="today-day-name">${dayName}</h1>
         <p class="today-date-label">${dateStr}</p>
-        <div class="today-section-label" style="margin-top:16px">Big Rocks</div>
       </div>
     </div>
   `;
 
-  if (rockCards.length > 0) {
-    html += rockCards.map(c => {
-      const color = getProjectColor(c.projectId);
-      const projName = getProjectName(c.projectId);
-      return `
-        <div class="today-card">
-          <div class="today-card-bar" style="background:${color}"></div>
-          <div class="today-card-title">${esc(c.title)}</div>
-          ${c.note ? `<div class="today-card-note">${esc(c.note)}</div>` : ''}
-          <div class="today-card-project">${esc(projName)}</div>
-        </div>
-      `;
-    }).join('');
-  }
-
   if (dayCards.length > 0) {
-    const dayLabel = THIS_WEEK_DAYS.find(d => d.id === todayCol)?.label || 'Today';
-    html += `<div class="today-section-label">${dayLabel}</div>`;
+    html += `<div class="today-section-label">Big Rocks</div>`;
     html += dayCards.map(c => {
       const color = getProjectColor(c.projectId);
       const projName = getProjectName(c.projectId);
@@ -2067,7 +2050,7 @@ function showToday() {
   document.getElementById('week-view').classList.remove('active');
   punch.classList.remove('active');
   view.classList.add('active');
-  document.getElementById('period-label').textContent = dayName + ' · Today';
+  document.getElementById('period-label').textContent = 'Big Rocks - Today';
   setActiveTab('today');
 
   // Fetch Todoist tasks
@@ -2338,7 +2321,7 @@ function migrateState() {
   await loadPunch();
   migrateState();
   renderBoard();
-  document.getElementById('period-label').textContent = getQuarterLabel() + ' · Horizons';
+  document.getElementById('period-label').textContent = 'Big Rocks - This Week';
   setActiveTab('horizons');
 })();
 </script>
