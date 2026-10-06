@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@vercel/blob": "^2.8.0",
-    "rrule": "^2.8.1"
+    "@vercel/blob": "^2.8.0"
   }
 }
