@@ -2003,14 +2003,7 @@ function showToday() {
     </div>
   `;
 
-  if (cards.length === 0) {
-    html += `
-      <div class="today-empty">
-        <div class="today-empty-icon">✓</div>
-        <div class="today-empty-text">Nothing on the board for today</div>
-      </div>
-    `;
-  } else {
+  if (cards.length > 0) {
     html += cards.map(c => {
       const color = getProjectColor(c.projectId);
       const projName = getProjectName(c.projectId);
@@ -2025,12 +2018,11 @@ function showToday() {
     }).join('');
   }
 
-  // Todoist section
   html += `
     <div class="todoist-section">
       <div class="todoist-header">
         <div class="todoist-logo">✓</div>
-        <span class="todoist-header-title">Todoist · #Work</span>
+        <span class="todoist-header-title">#work &amp; today</span>
       </div>
       <div id="todoist-container"></div>
       <div class="todoist-footer">Read and complete here · Add and manage in Todoist</div>
