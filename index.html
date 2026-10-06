@@ -1766,6 +1766,10 @@ function submitAdd(el, columnId) {
   const title = input.value.trim();
   if (!title) { input.focus(); return; }
 
+  // Disable button to prevent double-clicks
+  const addBtn = form.querySelector('.btn-primary');
+  if (addBtn) addBtn.disabled = true;
+
   const activeOption = form.querySelector('.project-option.active');
   const projectId = activeOption ? activeOption.dataset.projectId : state.projects[0]?.id;
 
@@ -1780,7 +1784,12 @@ function submitAdd(el, columnId) {
     order: state.cards.filter(c => c.column === columnId).length,
   });
   saveState();
-  renderBoard();
+
+  // Re-render the active view so the new card appears
+  if (currentView === 'week') renderWeek();
+  else if (currentView === 'today') showToday();
+  else if (currentView === 'punch') renderPunch();
+  else renderBoard();
 }
 
 // ── Settings ──
