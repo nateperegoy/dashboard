@@ -810,8 +810,11 @@ body {
   border-radius: inherit;
   transition: opacity 0.2s ease;
 }
+.today-card { cursor: grab; }
 .today-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06); transform: translateY(-1px); }
 .today-card:hover::before { opacity: 0.14; }
+.today-card.sortable-chosen { box-shadow: var(--shadow-md); cursor: grabbing; transform: translateY(-2px); }
+.today-card.sortable-ghost { opacity: 0.3; }
 .today-card-bar {
   position: absolute;
   left: 0; top: 6px; bottom: 6px;
@@ -845,8 +848,22 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 20px 0 8px;
   padding: 0 2px;
+}
+.today-rocks-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  flex-shrink: 0;
 }
 .today-section-label:first-of-type {
   margin-top: 0;
@@ -1257,6 +1274,23 @@ body {
   color: var(--text-muted);
   font-weight: 500;
 }
+.todoist-add-btn {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-light);
+  transition: all 0.15s ease;
+  letter-spacing: 0.02em;
+}
+.todoist-add-btn:hover {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
 .todoist-loading {
   padding: 16px 0;
   font-size: 13px;
@@ -1279,8 +1313,12 @@ body {
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
   margin-bottom: 6px;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
+.todoist-task .todoist-task-body { cursor: grab; }
+.todoist-task.sortable-chosen .todoist-task-body { cursor: grabbing; }
+.todoist-task.sortable-chosen { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.todoist-task.sortable-ghost { opacity: 0.3; }
 .todoist-task:hover { border-color: var(--border); }
 .todoist-task.completing {
   opacity: 0.4;
@@ -1723,7 +1761,7 @@ function renderBoard() {
     const dateStr = dates[col.id] || '';
 
     if (col.hasDays) {
-      const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id);
+      const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).sort((a,b) => (a.order||0) - (b.order||0));
       colEl.innerHTML = `
         ${dateStr ? `<div class="column-sub-date">${dateStr}</div>` : ''}
         <div class="card-list" data-column="${THIS_WEEK_ROCKS.id}">
@@ -2180,7 +2218,7 @@ function renderWeek() {
   const weekView = document.getElementById('week-view');
   const dayDates = getDayDates();
 
-  const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id);
+  const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).sort((a,b) => (a.order||0) - (b.order||0));
 
   // Compute week date range for header
   const _now = new Date();
@@ -2212,7 +2250,7 @@ function renderWeek() {
     </div>
     <div class="week-days-row">
       ${THIS_WEEK_DAYS.map(day => {
-        const cards = state.cards.filter(c => c.column === day.id);
+        const cards = state.cards.filter(c => c.column === day.id).sort((a,b) => (a.order||0) - (b.order||0));
         return `
           <div class="week-column" data-week-col="${day.id}">
             <div class="week-column-header">
@@ -2298,7 +2336,7 @@ function showToday() {
   const dateStr = months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
 
   // Show day-specific cards from the week view (not Big Rocks)
-  const dayCards = todayCol ? state.cards.filter(c => c.column === todayCol) : [];
+  const dayCards = todayCol ? state.cards.filter(c => c.column === todayCol).sort((a,b) => (a.order||0) - (b.order||0)) : [];
   const dayLabel = todayCol ? (THIS_WEEK_DAYS.find(d => d.id === todayCol)?.label || 'Today') : null;
 
   let html = `
@@ -2306,17 +2344,18 @@ function showToday() {
       <div>
         <h1 class="today-day-name">${dayName}</h1>
         <p class="today-date-label">${dateStr}</p>
-        <div class="today-section-label" style="margin-top:20px">Today</div>
+        <div class="today-section-label" style="margin-top:20px"><span class="today-rocks-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="none"><path d="M3 12l1.5-4 2-3h3l2 3 1.5 4H3z" fill="currentColor" opacity="0.25"/><path d="M3 12l1.5-4 2-3h3l2 3 1.5 4H3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 8.5L7 12M10.5 8.5L9 12M4.5 8h7" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/></svg></span>Today's Big Rocks</div>
       </div>
     </div>
   `;
 
   if (dayCards.length > 0) {
+    html += `<div class="today-card-list" data-column="${todayCol}">`;
     html += dayCards.map(c => {
       const color = getProjectColor(c.projectId);
       const projName = getProjectName(c.projectId);
       return `
-        <div class="today-card" style="--card-tint:${color}">
+        <div class="today-card" data-card-id="${c.id}" style="--card-tint:${color}">
           <div class="today-card-bar" style="background:${color}"></div>
           <div class="today-card-title">${esc(c.title)}</div>
           ${c.note ? `<div class="today-card-note">${esc(c.note)}</div>` : ''}
@@ -2324,6 +2363,7 @@ function showToday() {
         </div>
       `;
     }).join('');
+    html += `</div>`;
   } else {
     html += `
       <div class="today-empty">
@@ -2338,6 +2378,7 @@ function showToday() {
       <div class="todoist-header">
         <div class="todoist-logo">✓</div>
         <span class="todoist-header-title">#work &amp; today</span>
+        <a href="https://app.todoist.com" target="_blank" rel="noopener" class="todoist-add-btn">+ Add</a>
       </div>
       <div id="todoist-container"></div>
       <div class="todoist-footer">Read and complete here · Add and manage in Todoist</div>
@@ -2352,6 +2393,26 @@ function showToday() {
   view.classList.add('active');
   document.getElementById('period-label').textContent = 'Today';
   setActiveTab('today');
+
+  // Make today cards sortable — syncs order back to state (and Week view)
+  const todayCardList = view.querySelector('.today-card-list');
+  if (todayCardList) {
+    new Sortable(todayCardList, {
+      animation: 200,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      draggable: '.today-card',
+      onEnd: function(evt) {
+        const col = evt.to.dataset.column;
+        const orderedIds = Array.from(evt.to.querySelectorAll('.today-card')).map(el => el.dataset.cardId);
+        orderedIds.forEach((id, i) => {
+          const card = state.cards.find(c => c.id === id);
+          if (card) card.order = i;
+        });
+        saveState();
+      }
+    });
+  }
 
   // Fetch Todoist tasks
   fetchTodoistTasks();
@@ -2606,6 +2667,14 @@ let todoistTasks = null;
 let todoistError = null;
 let todoistLoading = true;
 let todoistInterval = null;
+const TODOIST_ORDER_KEY = 'work-dashboard-todoist-order';
+
+function getTodoistOrder() {
+  try { return JSON.parse(localStorage.getItem(TODOIST_ORDER_KEY)) || []; } catch(e) { return []; }
+}
+function saveTodoistOrder(orderedIds) {
+  try { localStorage.setItem(TODOIST_ORDER_KEY, JSON.stringify(orderedIds)); } catch(e) {}
+}
 
 async function fetchTodoistTasks() {
   todoistLoading = true;
@@ -2685,20 +2754,33 @@ function renderTodoistSection() {
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
 
-  // Pin "Work Startup" and "Preview Week" to top (unless completed), then sort by priority
+  // Apply custom order if saved, otherwise pin + priority sort
+  const customOrder = getTodoistOrder();
   const pinnedNames = ['work startup', 'preview week'];
-  const sortedTasks = [...todoistTasks].sort((a, b) => {
-    const aEl = document.querySelector(`.todoist-task[data-task-id="${a.id}"]`);
-    const bEl = document.querySelector(`.todoist-task[data-task-id="${b.id}"]`);
-    const aCompleted = aEl ? aEl.classList.contains('completed') : false;
-    const bCompleted = bEl ? bEl.classList.contains('completed') : false;
-    const aName = (a.content || '').toLowerCase();
-    const bName = (b.content || '').toLowerCase();
-    const aPinned = !aCompleted && pinnedNames.some(n => aName.includes(n));
-    const bPinned = !bCompleted && pinnedNames.some(n => bName.includes(n));
-    if (aPinned !== bPinned) return aPinned ? -1 : 1;
-    return (b.priority || 1) - (a.priority || 1);
-  });
+  let sortedTasks;
+  if (customOrder.length > 0) {
+    // Use saved order; new tasks (not in saved order) go at the end sorted by priority
+    const orderMap = {};
+    customOrder.forEach((id, i) => orderMap[id] = i);
+    const known = todoistTasks.filter(t => t.id in orderMap);
+    const unknown = todoistTasks.filter(t => !(t.id in orderMap));
+    known.sort((a, b) => orderMap[a.id] - orderMap[b.id]);
+    unknown.sort((a, b) => (b.priority || 1) - (a.priority || 1));
+    sortedTasks = [...known, ...unknown];
+  } else {
+    sortedTasks = [...todoistTasks].sort((a, b) => {
+      const aEl = document.querySelector(`.todoist-task[data-task-id="${a.id}"]`);
+      const bEl = document.querySelector(`.todoist-task[data-task-id="${b.id}"]`);
+      const aCompleted = aEl ? aEl.classList.contains('completed') : false;
+      const bCompleted = bEl ? bEl.classList.contains('completed') : false;
+      const aName = (a.content || '').toLowerCase();
+      const bName = (b.content || '').toLowerCase();
+      const aPinned = !aCompleted && pinnedNames.some(n => aName.includes(n));
+      const bPinned = !bCompleted && pinnedNames.some(n => bName.includes(n));
+      if (aPinned !== bPinned) return aPinned ? -1 : 1;
+      return (b.priority || 1) - (a.priority || 1);
+    });
+  }
 
   container.innerHTML = sortedTasks.map(t => {
     // Todoist REST API: due.date, priority is 1-4 (4=most urgent)
@@ -2725,6 +2807,19 @@ function renderTodoistSection() {
       </div>
     `;
   }).join('');
+
+  // Make Todoist tasks draggable
+  new Sortable(container, {
+    animation: 200,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    handle: '.todoist-task-body',
+    draggable: '.todoist-task',
+    onEnd: function(evt) {
+      const orderedIds = Array.from(container.querySelectorAll('.todoist-task')).map(el => el.dataset.taskId);
+      saveTodoistOrder(orderedIds);
+    }
+  });
 }
 
 // ── Migrate old state ──
