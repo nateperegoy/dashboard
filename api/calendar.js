@@ -6,7 +6,22 @@ export default async function handler(req, res) {
   }
 
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+  let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
+  // Handle all the ways Vercel might store newlines
+  privateKey = privateKey.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n');
+  // If pasted without newlines, re-insert them around the PEM markers
+  if (privateKey.includes('-----') && !privateKey.includes('\n')) {
+    privateKey = privateKey
+      .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
+      .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----\n');
+    // Break the base64 body into 64-char lines
+    const parts = privateKey.split('\n');
+    const header = parts[0];
+    const footer = parts[parts.length - 2];
+    const body = parts.slice(1, -2).join('');
+    const lines = body.match(/.{1,64}/g) || [];
+    privateKey = [header, ...lines, footer, ''].join('\n');
+  }
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
   if (!email || !privateKey || !calendarId) {
     return res.status(500).json({ error: 'GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, or GOOGLE_CALENDAR_ID not configured' });
