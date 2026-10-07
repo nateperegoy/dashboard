@@ -1,35 +1,46 @@
 import crypto from 'crypto';
 
+const SERVICE_ACCOUNT = {
+  client_email: 'dashboard-work-calendar@leafy-tenure-510902-d2.iam.gserviceaccount.com',
+  private_key: `-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCUWEtjFJYfykNz
+qP2cb9LNAfchsjiyjm7E+Lhsdk4yRJkcBEmURo3t7qPIQRy3E+W8kGSilkaVzZwh
+g28IjR6nmmKuQ1Gr0a/i07RV9rva+veVwU0k4Dvj0skwF+Aqh3/WeXxL9X/UlAWq
+UDYSn8byum0cdKPZxW1YJ14EKtkVQkMI/LtRWvcsH/dSkJ3/GYDGpH+Eg9QqW5nm
+AAtFgiFo7cxEY/MGjVj/S6Hb6fUdgGOjQvKZlUk6DdFyxxBKFQY4d0TPzfSlHWyb
+OC33rPbqeTau1nNqePlpVVPd1uEz4kl6Qb8cIB5KsmI/75gAIG1dbLS+nIF9UgYH
+X089gusBAgMBAAECggEABl6cLg7uO0M2DjtNWHA8vuy8rce3Q4N2IiMD2DRkOyhS
+4q8Ucbdt1K+QfMK+9uV10djpWUnWkgwYDiBUnithC5VHc3AUi6ofQUAR2DcV7dsk
+0ltQcqrmJ2wfk18TEwBqbs0cly5dZMVOUPfMupP9uOJkWPpxJqKhhU17bfZhB9aV
+yfDaLAOZwhe/4aElevEyS7eP0Ol0XY+X0i65y0SFe0v7cQu8ZD7G9AGoMxXO4gn5
+Mb3L9OmF4nHo0GjisJkSilyMnBo4QE/PGq453CL5BO4DwunY5cwuIbphq1O4N7af
+JQUoVmPLJmE0cY46WlC7D6Q9R+5zAXTKXOLlpffZoQKBgQDEZeQcmf+z71oC3Vya
+He/F4td8zC5RiQAxF7nu8JlZW3QUtMVOUCtobiqUaXHE2+krndJKLKsTsKYZL/L0
+pwhGFfigf156M7CIlvRv8ridR1FsW/4EwOcEEUzkSs7CQXNpyTWpPRYqH2aW66l1
+rDcQysaavR1TLB3DGq/kUv6QTQKBgQDBXSuIQgVneQrqU0R4roUjEAbpkXawwKfi
+L2JQjRoz9sfjIoatcpeBU2S33UWcKjk4xmVnlnI7udJoif9PuIqN+AB2xJ/YGP5R
+3kxtM6OkbTR2ua5ra22TSFa6YZj+EOyFem98tnPjmJ07VvEsSRP+eOA9pulaW2lo
+EjvVGDs/hQKBgHbybvGTo3ZK5G0PvGHq96kV9gSzdOoU23TgNdAtD/M6nFdeFJGV
+pHSfJFK2eh0MQ3ATKaWa4BIQzsg6bh8WesBX1jj+ay3/2E8hffG/Q2ieJQZHwNUI
+L+IayEMLu6WTFl9faYySXrYsRmnpWLzYDJGy/g4Bs50H/w6HPzg9u8eRAoGALu7R
+WSJFM4dCqfuJ/AzIDeme8+Q1vdMVLKY5o7mL6Z71h2Di9YiB04cNRD913OC2wNwO
+0uTGV07UDkGocY4mOy0915YEAiyW1gIx5LOK/abv+/03o6UQlJYTTuvPeaNb9U3x
+b4DNgimRyExi/0/BhZuLOgugSikz3WnHkgJupw0CgYEAvcMytFUB9HUhbtjYTtWu
+EfjP8KYQXbBtbdQyC5rKfzZGTdHHrpqpIpf8a5ii03mdfKPV985CDUh0XizJss32
+ouJODaNHs8REycp3s4uHFe2kaiN9Hiq7QtGTFkiapgsR/Wu/0PUjICNU6cEpdala
+tKutpT0ye48DcTw2D8fC68M=
+-----END PRIVATE KEY-----`,
+};
+
+const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || 'nperegoy@ourfatherlutheran.net';
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
-  // Handle all the ways Vercel might store newlines
-  privateKey = privateKey.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n');
-  // If pasted without newlines, re-insert them around the PEM markers
-  if (privateKey.includes('-----') && !privateKey.includes('\n')) {
-    privateKey = privateKey
-      .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
-      .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----\n');
-    // Break the base64 body into 64-char lines
-    const parts = privateKey.split('\n');
-    const header = parts[0];
-    const footer = parts[parts.length - 2];
-    const body = parts.slice(1, -2).join('');
-    const lines = body.match(/.{1,64}/g) || [];
-    privateKey = [header, ...lines, footer, ''].join('\n');
-  }
-  const calendarId = process.env.GOOGLE_CALENDAR_ID;
-  if (!email || !privateKey || !calendarId) {
-    return res.status(500).json({ error: 'GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, or GOOGLE_CALENDAR_ID not configured' });
-  }
-
   try {
-    const sa = { client_email: email, private_key: privateKey };
-    const token = await getAccessToken(sa);
+    const token = await getAccessToken(SERVICE_ACCOUNT);
 
     // Today's boundaries in Denver
     const now = new Date();
@@ -38,7 +49,7 @@ export default async function handler(req, res) {
     const timeMin = `${todayStr}T00:00:00-06:00`;
     const timeMax = `${todayStr}T23:59:59-06:00`;
 
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events`
       + `?timeMin=${encodeURIComponent(timeMin)}`
       + `&timeMax=${encodeURIComponent(timeMax)}`
       + `&singleEvents=true`
