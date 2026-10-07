@@ -106,14 +106,28 @@ body {
   padding: 6px 10px;
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 52px;
 }
-.domain-btn:hover { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); }
-.domain-btn.active-domain { background: rgba(255,255,255,0.22); color: #fff; }
-.domain-btn-combo { margin-left: 8px; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 12px; border-radius: 6px; }
+.domain-btn .domain-letter {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.domain-btn:hover { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9); }
+.domain-btn.active-domain { background: rgba(255,255,255,0.2); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.domain-btn-combo { margin-left: 8px; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 12px; }
 .app-header .btn {
   background: rgba(255,255,255,0.08);
   border: none;
@@ -1722,10 +1736,10 @@ body {
 <div class="app-header">
   <div class="header-row">
     <div class="domain-switcher">
-      <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')">P</button>
-      <button class="domain-btn" data-domain="home" onclick="switchDomain('home')">H</button>
-      <button class="domain-btn" data-domain="work" onclick="switchDomain('work')">W</button>
-      <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()">P+H</button>
+      <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')"><span class="domain-letter">P</span> Personal</button>
+      <button class="domain-btn" data-domain="home" onclick="switchDomain('home')"><span class="domain-letter">H</span> Home</button>
+      <button class="domain-btn" data-domain="work" onclick="switchDomain('work')"><span class="domain-letter">W</span> Work</button>
+      <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()"><span class="domain-letter">P+H</span> Combined</button>
     </div>
     <div class="header-nav">
       <button class="btn" id="tab-today" onclick="showToday()" aria-label="Today"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M3.8 12.2l1-1M11.2 4.8l1-1"/></svg> Today</button>
