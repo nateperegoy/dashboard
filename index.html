@@ -91,6 +91,27 @@ body {
   border-bottom: 1px solid var(--border);
   padding: 16px 24px 12px;
 }
+.domain-switcher {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.domain-btn {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: rgba(255,255,255,0.5);
+  border-radius: 6px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+.domain-btn:hover { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); }
+.domain-btn.active-domain { background: rgba(255,255,255,0.22); color: #fff; }
 .app-header .btn {
   background: rgba(255,255,255,0.08);
   border: none;
@@ -1660,6 +1681,11 @@ body {
 <body>
 
 <div class="app-header">
+  <div class="domain-switcher">
+    <button class="domain-btn" data-domain="work" onclick="switchDomain('work')">Work</button>
+    <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')">Personal</button>
+    <button class="domain-btn" data-domain="home" onclick="switchDomain('home')">Home</button>
+  </div>
   <div class="header-row">
     <div class="header-nav">
       <button class="btn" id="tab-today" onclick="showToday()" aria-label="Today"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M3.8 12.2l1-1M11.2 4.8l1-1"/></svg> Today</button>
@@ -1717,30 +1743,177 @@ body {
 </div>
 
 <script>
-const STORAGE_KEY = 'work-dashboard-v10';
+// ── Domain Configuration ──
+const DOMAINS = {
+  work: {
+    label: 'Work',
+    accent: { light: '#4a7dac', dark: '#6ba3cc' },
+    accentLight: { light: '#eaf0f6', dark: '#1c2e3e' },
+    dragGhost: { light: 'rgba(74, 125, 172, 0.06)', dark: 'rgba(107, 163, 204, 0.08)' },
+    storageKey: 'work-dashboard-v10',
+    blobKey: 'board',
+    todoistProject: 'WORK',
+    todoistOrderKey: 'work-dashboard-todoist-order',
+    timeBlocksKey: 'work-dashboard-time-blocks',
+    alwaysTopNames: ['work startup'],
+    pinnedNames: ['work startup', 'preview week'],
+    weekDays: [
+      { id: 'tw-tue', label: 'Tue' },
+      { id: 'tw-wed', label: 'Wed' },
+      { id: 'tw-thu', label: 'Thu' },
+      { id: 'tw-fri', label: 'Fri' },
+    ],
+    laterMonths: [
+      { id: 'lt-nov', label: 'Nov' },
+      { id: 'lt-dec', label: 'Dec' },
+      { id: 'lt-jan', label: 'Jan' },
+    ],
+    columns: [
+      { id: 'this-week', label: 'Week', hasDays: true },
+      { id: 'next-week', label: 'Next Week' },
+      { id: 'this-month', label: 'This Month' },
+      { id: 'later', label: 'Later', hasMonths: true },
+      { id: 'someday', label: 'Someday' },
+    ],
+  },
+  personal: {
+    label: 'Personal',
+    accent: { light: '#b04048', dark: '#d06070' },
+    accentLight: { light: '#f6eaeb', dark: '#3e1c20' },
+    dragGhost: { light: 'rgba(176, 64, 72, 0.06)', dark: 'rgba(208, 96, 112, 0.08)' },
+    storageKey: 'personal-dashboard-v1',
+    blobKey: 'board-personal',
+    todoistProject: 'PERSONAL',
+    todoistOrderKey: 'personal-dashboard-todoist-order',
+    timeBlocksKey: 'personal-dashboard-time-blocks',
+    alwaysTopNames: [],
+    pinnedNames: [],
+    weekDays: [
+      { id: 'tw-mon', label: 'Mon' },
+      { id: 'tw-tue', label: 'Tue' },
+      { id: 'tw-wed', label: 'Wed' },
+      { id: 'tw-thu', label: 'Thu' },
+      { id: 'tw-fri', label: 'Fri' },
+      { id: 'tw-sat', label: 'Sat' },
+      { id: 'tw-sun', label: 'Sun' },
+    ],
+    laterMonths: [
+      { id: 'lt-nov', label: 'Nov' },
+      { id: 'lt-dec', label: 'Dec' },
+      { id: 'lt-jan', label: 'Jan' },
+    ],
+    columns: [
+      { id: 'this-week', label: 'Week', hasDays: true },
+      { id: 'next-week', label: 'Next Week' },
+      { id: 'this-month', label: 'This Month' },
+      { id: 'later', label: 'Later', hasMonths: true },
+      { id: 'someday', label: 'Someday' },
+    ],
+  },
+  home: {
+    label: 'Home',
+    accent: { light: '#c47a3b', dark: '#d9944f' },
+    accentLight: { light: '#f6f0ea', dark: '#3e2c1c' },
+    dragGhost: { light: 'rgba(196, 122, 59, 0.06)', dark: 'rgba(217, 148, 79, 0.08)' },
+    storageKey: 'home-dashboard-v1',
+    blobKey: 'board-home',
+    todoistProject: 'HOME',
+    todoistOrderKey: 'home-dashboard-todoist-order',
+    timeBlocksKey: 'home-dashboard-time-blocks',
+    alwaysTopNames: [],
+    pinnedNames: [],
+    weekDays: [
+      { id: 'tw-mon', label: 'Mon' },
+      { id: 'tw-tue', label: 'Tue' },
+      { id: 'tw-wed', label: 'Wed' },
+      { id: 'tw-thu', label: 'Thu' },
+      { id: 'tw-fri', label: 'Fri' },
+      { id: 'tw-sat', label: 'Sat' },
+      { id: 'tw-sun', label: 'Sun' },
+    ],
+    laterMonths: [
+      { id: 'lt-nov', label: 'Nov' },
+      { id: 'lt-dec', label: 'Dec' },
+      { id: 'lt-jan', label: 'Jan' },
+    ],
+    columns: [
+      { id: 'this-week', label: 'Week', hasDays: true },
+      { id: 'this-month', label: 'This Month' },
+      { id: 'someday', label: 'Someday' },
+    ],
+  },
+};
+
+let activeDomain = (() => { try { return localStorage.getItem('dashboard-active-domain') || 'work'; } catch(e) { return 'work'; } })();
+function getDomainConfig() { return DOMAINS[activeDomain]; }
+
+// Derived from active domain — these are now getters
+function getStorageKey() { return getDomainConfig().storageKey; }
+function getBlobKey() { return getDomainConfig().blobKey; }
+function getTodoistProject() { return getDomainConfig().todoistProject; }
+
 const PUNCH_KEY = 'work-dashboard-punch-v1';
 
 const THIS_WEEK_ROCKS = { id: 'tw-rocks', label: 'Big Rocks' };
-const THIS_WEEK_DAYS = [
-  { id: 'tw-tue', label: 'Tue' },
-  { id: 'tw-wed', label: 'Wed' },
-  { id: 'tw-thu', label: 'Thu' },
-  { id: 'tw-fri', label: 'Fri' },
-];
+function getThisWeekDays() { return getDomainConfig().weekDays; }
+function getLaterMonths() { return getDomainConfig().laterMonths; }
+function getColumns() { return getDomainConfig().columns; }
 
-const LATER_MONTHS = [
-  { id: 'lt-nov', label: 'Nov' },
-  { id: 'lt-dec', label: 'Dec' },
-  { id: 'lt-jan', label: 'Jan' },
-];
+// Legacy aliases for code that reads these directly
+let THIS_WEEK_DAYS = DOMAINS[activeDomain].weekDays;
+let LATER_MONTHS = DOMAINS[activeDomain].laterMonths;
+let COLUMNS = DOMAINS[activeDomain].columns;
 
-const COLUMNS = [
-  { id: 'this-week', label: 'Week', hasDays: true },
-  { id: 'next-week', label: 'Next Week' },
-  { id: 'this-month', label: 'This Month' },
-  { id: 'later', label: 'Later', hasMonths: true },
-  { id: 'someday', label: 'Someday' },
-];
+function applyDomainTheme() {
+  const cfg = getDomainConfig();
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
+    document.documentElement.getAttribute('data-theme') === 'dark';
+  const mode = isDark ? 'dark' : 'light';
+  const root = document.documentElement;
+  root.style.setProperty('--accent', cfg.accent[mode]);
+  root.style.setProperty('--accent-light', cfg.accentLight[mode]);
+  root.style.setProperty('--drag-ghost', cfg.dragGhost[mode]);
+  // Update header background directly since it uses var(--accent)
+  const header = document.querySelector('.app-header');
+  if (header) header.style.background = cfg.accent[mode];
+  // Update meta theme-color
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', cfg.accent[mode]);
+  // Update domain button active state
+  document.querySelectorAll('.domain-btn').forEach(btn => {
+    btn.classList.toggle('active-domain', btn.dataset.domain === activeDomain);
+  });
+  // Update title
+  document.title = cfg.label + ' Dashboard';
+}
+
+async function switchDomain(domain) {
+  if (domain === activeDomain) return;
+  activeDomain = domain;
+  try { localStorage.setItem('dashboard-active-domain', domain); } catch(e) {}
+  // Update legacy aliases
+  THIS_WEEK_DAYS = getDomainConfig().weekDays;
+  LATER_MONTHS = getDomainConfig().laterMonths;
+  COLUMNS = getDomainConfig().columns;
+  // Apply theme colors
+  applyDomainTheme();
+  // Reload state from domain-specific storage
+  await loadState();
+  migrateState();
+  // Re-render current view
+  renderBoard();
+  // Clear and restart todoist
+  cleanupTodoist();
+  // Re-show current view to refresh everything
+  if (currentView === 'week') showWeek();
+  else if (currentView === 'today') showToday();
+  else if (currentView === 'punch') { await loadPunch(); showPunch(); }
+  else if (currentView === 'archive') { await loadArchive(); showArchive(); }
+  else showHorizons();
+}
+
+// Listen for color scheme changes to update domain theme
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyDomainTheme());
 
 const DEFAULT_COLORS = [
   '#4a6274', '#6b8f71', '#c47a3b', '#8b6b9e',
@@ -1785,25 +1958,26 @@ const DEFAULT_STATE = {
 };
 
 async function loadState() {
+  const sk = getStorageKey();
+  const bk = getBlobKey();
   // Try cloud first
   try {
-    const resp = await fetch('/api/board?key=board');
+    const resp = await fetch('/api/board?key=' + bk);
     if (resp.ok) {
       const json = await resp.json();
       if (json.data) {
         state = json.data;
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+        try { localStorage.setItem(sk, JSON.stringify(state)); } catch(e) {}
         return;
       }
     }
   } catch(e) {}
   // Fall back to localStorage — and seed the cloud if we have local data
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(sk);
     if (raw) {
       state = JSON.parse(raw);
-      // Seed cloud with localStorage data
-      fetch('/api/board?key=board', {
+      fetch('/api/board?key=' + bk, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: raw,
@@ -1816,11 +1990,12 @@ async function loadState() {
 
 let _saveTimeout = null;
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
-  // Debounce cloud saves to avoid hammering on rapid edits
+  const sk = getStorageKey();
+  const bk = getBlobKey();
+  try { localStorage.setItem(sk, JSON.stringify(state)); } catch(e) {}
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(() => {
-    fetch('/api/board?key=board', {
+    fetch('/api/board?key=' + bk, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(state),
@@ -1901,20 +2076,18 @@ function getDayDates() {
     return months[d.getMonth()] + ' ' + d.getDate();
   };
   const iso = (d) => d.toLocaleDateString('en-CA');
-  const tue = new Date(mon); tue.setDate(mon.getDate() + 1);
-  const wed = new Date(mon); wed.setDate(mon.getDate() + 2);
-  const thu = new Date(mon); thu.setDate(mon.getDate() + 3);
-  const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
-  return {
-    'tw-tue': fmt(tue),
-    'tw-wed': fmt(wed),
-    'tw-thu': fmt(thu),
-    'tw-fri': fmt(fri),
-    'tw-tue-iso': iso(tue),
-    'tw-wed-iso': iso(wed),
-    'tw-thu-iso': iso(thu),
-    'tw-fri-iso': iso(fri),
-  };
+  const dayMap = { 'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6 };
+  const weekDays = getThisWeekDays();
+  const result = {};
+  weekDays.forEach(wd => {
+    const offset = dayMap[wd.label];
+    if (offset === undefined) return;
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + offset);
+    result[wd.id] = fmt(d);
+    result[wd.id + '-iso'] = iso(d);
+  });
+  return result;
 }
 
 // ── Active View Management ──
@@ -1922,7 +2095,7 @@ let currentView = 'horizons';
 
 function setActiveTab(view) {
   currentView = view;
-  try { localStorage.setItem('work-dashboard-view', view); } catch(e) {}
+  try { localStorage.setItem('dashboard-view-' + activeDomain, view); } catch(e) {}
   document.getElementById('tab-horizons').classList.toggle('active-tab', view === 'horizons');
   document.getElementById('tab-week').classList.toggle('active-tab', view === 'week');
   document.getElementById('tab-today').classList.toggle('active-tab', view === 'today');
@@ -2550,11 +2723,12 @@ function renderWeek() {
 
 // ── Today View ──
 function getTodayColumnId() {
-  const days = ['sun','mon','tue','wed','thu','fri','sat'];
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const now = new Date();
-  const d = days[now.getDay()];
-  const map = { tue: 'tw-tue', wed: 'tw-wed', thu: 'tw-thu', fri: 'tw-fri' };
-  return map[d] || null;
+  const todayLabel = dayNames[now.getDay()];
+  const weekDays = getThisWeekDays();
+  const match = weekDays.find(d => d.label === todayLabel);
+  return match ? match.id : null;
 }
 
 // Track the currently viewed date in today view
@@ -2728,12 +2902,12 @@ function showToday(targetDate, targetCol) {
 const CAL_START_HOUR = 8;
 const CAL_END_HOUR = 20; // 8pm
 const CAL_SLOT_MIN = 30;
-const TIME_BLOCKS_KEY = 'work-dashboard-time-blocks';
+function getTimeBlocksKey() { return getDomainConfig().timeBlocksKey; }
 let calendarEvents = [];
 
 function getTimeBlocks() {
   try {
-    const stored = JSON.parse(localStorage.getItem(TIME_BLOCKS_KEY));
+    const stored = JSON.parse(localStorage.getItem(getTimeBlocksKey()));
     if (!stored) return [];
     // Only return today's blocks
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
@@ -2744,12 +2918,12 @@ function getTimeBlocks() {
 function saveTimeBlocks(blocks) {
   try {
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
-    const stored = JSON.parse(localStorage.getItem(TIME_BLOCKS_KEY) || '{}');
+    const stored = JSON.parse(localStorage.getItem(getTimeBlocksKey()) || '{}');
     stored[todayStr] = blocks;
     // Clean up old days (keep last 7)
     const keys = Object.keys(stored).sort();
     while (keys.length > 7) { delete stored[keys.shift()]; }
-    localStorage.setItem(TIME_BLOCKS_KEY, JSON.stringify(stored));
+    localStorage.setItem(getTimeBlocksKey(), JSON.stringify(stored));
   } catch(e) {}
 }
 
@@ -3229,13 +3403,13 @@ let todoistTasks = null;
 let todoistError = null;
 let todoistLoading = true;
 let todoistInterval = null;
-const TODOIST_ORDER_KEY = 'work-dashboard-todoist-order';
+function getTodoistOrderKey() { return getDomainConfig().todoistOrderKey; }
 
 function getTodoistOrder() {
-  try { return JSON.parse(localStorage.getItem(TODOIST_ORDER_KEY)) || []; } catch(e) { return []; }
+  try { return JSON.parse(localStorage.getItem(getTodoistOrderKey())) || []; } catch(e) { return []; }
 }
 function saveTodoistOrder(orderedIds) {
-  try { localStorage.setItem(TODOIST_ORDER_KEY, JSON.stringify(orderedIds)); } catch(e) {}
+  try { localStorage.setItem(getTodoistOrderKey(), JSON.stringify(orderedIds)); } catch(e) {}
 }
 
 async function fetchTodoistTasks() {
@@ -3244,8 +3418,10 @@ async function fetchTodoistTasks() {
   renderTodoistSection();
 
   try {
-    const dateParam = todayViewDate ? `?date=${todayViewDate}` : '';
-    const resp = await fetch('/api/todoist' + dateParam);
+    const params = new URLSearchParams();
+    if (todayViewDate) params.set('date', todayViewDate);
+    params.set('project', getTodoistProject());
+    const resp = await fetch('/api/todoist?' + params.toString());
     if (!resp.ok) {
       const data = await resp.json().catch(() => ({}));
       if (resp.status === 500 && data.error && data.error.includes('not configured')) {
@@ -3320,8 +3496,8 @@ function renderTodoistSection() {
   // Apply custom order if saved, otherwise pin + priority sort
   // "WORK STARTUP" is always pinned to the very top regardless of sort/drag order
   const customOrder = getTodoistOrder();
-  const alwaysTopNames = ['work startup'];
-  const pinnedNames = ['work startup', 'preview week'];
+  const alwaysTopNames = getDomainConfig().alwaysTopNames;
+  const pinnedNames = getDomainConfig().pinnedNames;
   let sortedTasks;
   if (customOrder.length > 0) {
     const orderMap = {};
@@ -3670,6 +3846,7 @@ function setupArchiveDragTarget() {
 
 // ── Init ──
 (async () => {
+  applyDomainTheme();
   await loadState();
   await loadPunch();
   await loadArchive();
@@ -3677,7 +3854,7 @@ function setupArchiveDragTarget() {
   renderBoard();
   setupArchiveDragTarget();
 
-  const savedView = (() => { try { return localStorage.getItem('work-dashboard-view'); } catch(e) { return null; } })();
+  const savedView = (() => { try { return localStorage.getItem('dashboard-view-' + activeDomain); } catch(e) { return null; } })();
   const startView = ['horizons','week','today','punch','archive'].includes(savedView) ? savedView : 'horizons';
   if (startView === 'week') showWeek();
   else if (startView === 'today') showToday();

@@ -3,8 +3,9 @@ import { put, get, del, list } from '@vercel/blob';
 // Cloud sync for board state via Vercel Blob (OIDC auth via BLOB_STORE_ID)
 export default async function handler(req, res) {
   const key = req.query.key;
-  if (!key || !['board', 'ideas'].includes(key)) {
-    return res.status(400).json({ error: 'key must be "board" or "ideas"' });
+  const validKeys = ['board', 'ideas', 'board-personal', 'board-home'];
+  if (!key || !validKeys.includes(key)) {
+    return res.status(400).json({ error: `key must be one of: ${validKeys.join(', ')}` });
   }
 
   const blobPath = `dashboard-${key}.json`;

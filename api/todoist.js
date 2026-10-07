@@ -9,10 +9,13 @@ export default async function handler(req, res) {
     'Content-Type': 'application/json',
   };
 
-  // GET — fetch Work tasks due today or overdue
+  // GET — fetch tasks due today or overdue for a given project
   if (req.method === 'GET') {
     try {
-      // 1. Fetch projects to find "WORK" and its subprojects
+      // Which top-level project to pull from (default: WORK)
+      const projectName = (req.query.project || 'WORK').toUpperCase();
+
+      // 1. Fetch projects to find the target and its subprojects
       const projResp = await fetch('https://api.todoist.com/api/v1/projects', { headers });
       if (!projResp.ok) {
         return res.status(projResp.status).json({ error: 'Failed to fetch projects' });
@@ -20,13 +23,13 @@ export default async function handler(req, res) {
       const projData = await projResp.json();
       const projects = projData.results || projData || [];
 
-      const workProject = projects.find(p => p.name === 'WORK');
-      if (!workProject) {
+      const targetProject = projects.find(p => p.name.toUpperCase() === projectName);
+      if (!targetProject) {
         return res.json({ tasks: [] });
       }
-      const workIds = [workProject.id];
+      const workIds = [targetProject.id];
       projects.forEach(p => {
-        if (p.parent_id === workProject.id) workIds.push(p.id);
+        if (p.parent_id === targetProject.id) workIds.push(p.id);
       });
 
       // 2. Fetch tasks per project (parallel) — much faster than fetching all tasks
