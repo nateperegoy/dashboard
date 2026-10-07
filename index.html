@@ -960,6 +960,17 @@ body {
   position: relative;
   overflow: hidden;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.today-card-rock {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--card-tint, var(--text-muted));
+  opacity: 0.6;
 }
 .today-card::before {
   content: '';
@@ -981,6 +992,10 @@ body {
   left: 0; top: 6px; bottom: 6px;
   width: 3px;
   border-radius: 3px;
+}
+.today-card-content {
+  flex: 1;
+  min-width: 0;
 }
 .today-card-title {
   font-size: 16px;
@@ -2530,9 +2545,12 @@ function showToday() {
       return `
         <div class="today-card" draggable="true" data-card-id="${c.id}" data-drag-type="card" data-drag-title="${esc(c.title)}" data-drag-color="${color}" style="--card-tint:${color}">
           <div class="today-card-bar" style="background:${color}"></div>
-          <div class="today-card-title">${esc(c.title)}</div>
-          ${c.note ? `<div class="today-card-note">${esc(c.note)}</div>` : ''}
-          <div class="today-card-project">${esc(projName)}</div>
+          <svg class="today-card-rock" viewBox="0 0 20 20" fill="none"><path d="M3 15.5C3 15.5 3.6 12.5 5.5 10.5C6.7 9.3 7.3 8 7.9 6.2C8.5 4.8 9.7 3.5 10.9 4.1C12.1 4.7 12.7 4.7 13.9 5.9C15.1 7.1 15.7 9.5 16.3 11.3C16.9 13.1 16.3 15.5 16.3 15.5Z" fill="currentColor" opacity="0.4"/><path d="M3 15.5C3 15.5 3.6 12.5 5.5 10.5C6.7 9.3 7.3 8 7.9 6.2C8.5 4.8 9.7 3.5 10.9 4.1C12.1 4.7 12.7 4.7 13.9 5.9C15.1 7.1 15.7 9.5 16.3 11.3C16.9 13.1 16.3 15.5 16.3 15.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="today-card-content">
+            <div class="today-card-title">${esc(c.title)}</div>
+            ${c.note ? `<div class="today-card-note">${esc(c.note)}</div>` : ''}
+            <div class="today-card-project">${esc(projName)}</div>
+          </div>
         </div>
       `;
     }).join('');
