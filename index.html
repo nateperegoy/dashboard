@@ -747,6 +747,9 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
 }
+.week-column.week-day-today {
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg));
+}
 .week-column:last-child { border-right: none; }
 .week-column-header {
   background: var(--bg);
@@ -2485,8 +2488,9 @@ function renderWeek() {
     <div class="week-days-row">
       ${THIS_WEEK_DAYS.map(day => {
         const cards = state.cards.filter(c => c.column === day.id).sort((a,b) => (a.order||0) - (b.order||0));
+        const _isToday = dayDates[day.id + '-iso'] === new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
         return `
-          <div class="week-column" data-week-col="${day.id}">
+          <div class="week-column${_isToday ? ' week-day-today' : ''}" data-week-col="${day.id}">
             <div class="week-column-header">
               <div class="week-day-link" onclick="showTodayForDate('${dayDates[day.id + '-iso']}', '${day.id}')" title="View this day">
                 <span class="column-title">${day.label}</span>
