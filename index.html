@@ -94,8 +94,9 @@ body {
 .domain-switcher {
   display: flex;
   gap: 4px;
-  justify-content: center;
-  margin-bottom: 10px;
+  align-items: center;
+  position: absolute;
+  left: 0;
 }
 .domain-btn {
   background: rgba(255,255,255,0.08);
@@ -789,6 +790,40 @@ body {
 .week-column-header .week-day-link:hover .column-title { text-decoration: underline; }
 .week-column-header .column-count { font-size: 11px; color: var(--accent); background: var(--accent-light); padding: 1px 7px; border-radius: 10px; font-variant-numeric: tabular-nums; font-weight: 600; }
 
+.week-nw-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.week-nw-toggle .toggle-arrow {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+.week-nw-toggle.expanded .toggle-arrow {
+  transform: rotate(90deg);
+}
+.week-nw-toggle .toggle-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.week-nw-row {
+  display: none;
+  gap: 0;
+  flex: 1;
+  overflow-x: auto;
+  border-top: 1px solid var(--border-light);
+}
+.week-nw-row.visible {
+  display: flex;
+}
+
 /* Today view */
 .today-view {
   display: none;
@@ -862,9 +897,11 @@ body {
   font-size: 10px;
   font-weight: 500;
   color: var(--text-muted);
-  padding: 4px 8px 0 8px;
+  padding: 0 8px 0 8px;
   text-align: right;
   user-select: none;
+  line-height: 1;
+  transform: translateY(-5px);
 }
 .cal-slot-area {
   flex: 1;
@@ -1669,7 +1706,8 @@ body {
   .board { padding: 0 4px 24px; }
   .column { min-width: 180px; }
   .app-header { padding: 10px 12px 8px; }
-  .header-row { justify-content: center; }
+  .header-row { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .domain-switcher { position: static; order: -1; width: 100%; justify-content: center; }
   .header-nav { margin: 0; gap: 6px; }
   .header-secondary { position: static; gap: 6px; margin-left: 6px; }
   .app-header .btn { min-width: 44px; padding: 5px 7px; font-size: 9px; }
@@ -1682,13 +1720,13 @@ body {
 <body>
 
 <div class="app-header">
-  <div class="domain-switcher">
-    <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')">Personal</button>
-    <button class="domain-btn" data-domain="home" onclick="switchDomain('home')">Home</button>
-    <button class="domain-btn" data-domain="work" onclick="switchDomain('work')">Work</button>
-    <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()">P+H Today</button>
-  </div>
   <div class="header-row">
+    <div class="domain-switcher">
+      <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')">Personal</button>
+      <button class="domain-btn" data-domain="home" onclick="switchDomain('home')">Home</button>
+      <button class="domain-btn" data-domain="work" onclick="switchDomain('work')">Work</button>
+      <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()">P+H Today</button>
+    </div>
     <div class="header-nav">
       <button class="btn" id="tab-today" onclick="showToday()" aria-label="Today"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M3.8 12.2l1-1M11.2 4.8l1-1"/></svg> Today</button>
       <button class="btn" id="tab-week" onclick="showWeek()" aria-label="Week"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 3V1.5M10.5 3V1.5"/></svg> Week</button>
@@ -1765,6 +1803,12 @@ const DOMAINS = {
       { id: 'tw-thu', label: 'Thu' },
       { id: 'tw-fri', label: 'Fri' },
     ],
+    nextWeekDays: [
+      { id: 'nw-tue', label: 'Tue' },
+      { id: 'nw-wed', label: 'Wed' },
+      { id: 'nw-thu', label: 'Thu' },
+      { id: 'nw-fri', label: 'Fri' },
+    ],
     laterMonths: [
       { id: 'lt-nov', label: 'Nov' },
       { id: 'lt-dec', label: 'Dec' },
@@ -1772,7 +1816,7 @@ const DOMAINS = {
     ],
     columns: [
       { id: 'this-week', label: 'Week', hasDays: true },
-      { id: 'next-week', label: 'Next Week' },
+      { id: 'next-week', label: 'Next Week', hasNextWeekDays: true },
       { id: 'this-month', label: 'This Month' },
       { id: 'later', label: 'Later', hasMonths: true },
       { id: 'someday', label: 'Someday' },
@@ -1799,6 +1843,15 @@ const DOMAINS = {
       { id: 'tw-sat', label: 'Sat' },
       { id: 'tw-sun', label: 'Sun' },
     ],
+    nextWeekDays: [
+      { id: 'nw-mon', label: 'Mon' },
+      { id: 'nw-tue', label: 'Tue' },
+      { id: 'nw-wed', label: 'Wed' },
+      { id: 'nw-thu', label: 'Thu' },
+      { id: 'nw-fri', label: 'Fri' },
+      { id: 'nw-sat', label: 'Sat' },
+      { id: 'nw-sun', label: 'Sun' },
+    ],
     laterMonths: [
       { id: 'lt-nov', label: 'Nov' },
       { id: 'lt-dec', label: 'Dec' },
@@ -1806,7 +1859,7 @@ const DOMAINS = {
     ],
     columns: [
       { id: 'this-week', label: 'Week', hasDays: true },
-      { id: 'next-week', label: 'Next Week' },
+      { id: 'next-week', label: 'Next Week', hasNextWeekDays: true },
       { id: 'this-month', label: 'This Month' },
       { id: 'later', label: 'Later', hasMonths: true },
       { id: 'someday', label: 'Someday' },
@@ -1833,6 +1886,15 @@ const DOMAINS = {
       { id: 'tw-sat', label: 'Sat' },
       { id: 'tw-sun', label: 'Sun' },
     ],
+    nextWeekDays: [
+      { id: 'nw-mon', label: 'Mon' },
+      { id: 'nw-tue', label: 'Tue' },
+      { id: 'nw-wed', label: 'Wed' },
+      { id: 'nw-thu', label: 'Thu' },
+      { id: 'nw-fri', label: 'Fri' },
+      { id: 'nw-sat', label: 'Sat' },
+      { id: 'nw-sun', label: 'Sun' },
+    ],
     laterMonths: [
       { id: 'lt-nov', label: 'Nov' },
       { id: 'lt-dec', label: 'Dec' },
@@ -1840,7 +1902,9 @@ const DOMAINS = {
     ],
     columns: [
       { id: 'this-week', label: 'Week', hasDays: true },
+      { id: 'next-week', label: 'Next Week', hasNextWeekDays: true },
       { id: 'this-month', label: 'This Month' },
+      { id: 'later', label: 'Later', hasMonths: true },
       { id: 'someday', label: 'Someday' },
     ],
   },
@@ -1858,6 +1922,7 @@ const PUNCH_KEY = 'work-dashboard-punch-v1';
 
 const THIS_WEEK_ROCKS = { id: 'tw-rocks', label: 'Big Rocks' };
 function getThisWeekDays() { return getDomainConfig().weekDays; }
+function getNextWeekDays() { return getDomainConfig().nextWeekDays || []; }
 function getLaterMonths() { return getDomainConfig().laterMonths; }
 function getColumns() { return getDomainConfig().columns; }
 
@@ -2106,6 +2171,30 @@ function getDayDates() {
   return result;
 }
 
+function getNextWeekDayDates() {
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1) + 7); // next Monday
+  const fmt = (d) => {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[d.getMonth()] + ' ' + d.getDate();
+  };
+  const iso = (d) => d.toLocaleDateString('en-CA');
+  const dayMap = { 'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6 };
+  const nwDays = getNextWeekDays();
+  const result = {};
+  nwDays.forEach(wd => {
+    const offset = dayMap[wd.label];
+    if (offset === undefined) return;
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + offset);
+    result[wd.id] = fmt(d);
+    result[wd.id + '-iso'] = iso(d);
+  });
+  return result;
+}
+
 // ── Active View Management ──
 let currentView = 'horizons';
 
@@ -2158,6 +2247,9 @@ function renderBoard() {
     let count = 0;
     if (col.hasDays) {
       count = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).length;
+    } else if (col.hasNextWeekDays) {
+      const nwDays = getDomainConfig().nextWeekDays || [];
+      count = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column)).length;
     } else if (col.hasMonths) {
       count = state.cards.filter(c => LATER_MONTHS.some(m => m.id === c.column)).length;
     } else {
@@ -2188,6 +2280,16 @@ function renderBoard() {
           ${rocksCards.map(c => renderCard(c)).join('')}
         </div>
         <button class="add-card-btn" onclick="showAddForm(this, '${THIS_WEEK_ROCKS.id}')">+ Add</button>
+      `;
+    } else if (col.hasNextWeekDays) {
+      const nwDays = getDomainConfig().nextWeekDays || [];
+      const nwCards = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column));
+      colEl.innerHTML = `
+        ${dateStr ? `<div class="column-sub-date">${dateStr}</div>` : ''}
+        <div class="card-list" data-column="${col.id}">
+          ${nwCards.sort((a,b) => (a.order||0) - (b.order||0)).map(c => renderCard(c)).join('')}
+        </div>
+        <button class="add-card-btn" onclick="showAddForm(this, '${col.id}')">+ Add</button>
       `;
     } else if (col.hasMonths) {
       colEl.innerHTML = LATER_MONTHS.map(month => {
@@ -2283,6 +2385,9 @@ function updateCounts() {
     let count;
     if (col && col.hasDays) {
       count = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id || THIS_WEEK_DAYS.some(d => d.id === c.column)).length;
+    } else if (col && col.hasNextWeekDays) {
+      const nwDays = getDomainConfig().nextWeekDays || [];
+      count = state.cards.filter(c => c.column === colId || nwDays.some(d => d.id === c.column)).length;
     } else if (col && col.hasMonths) {
       count = state.cards.filter(c => LATER_MONTHS.some(m => m.id === c.column)).length;
     } else {
@@ -2646,6 +2751,8 @@ function showWeek() {
 function renderWeek() {
   const weekView = document.getElementById('week-view');
   const dayDates = getDayDates();
+  const nwDayDates = getNextWeekDayDates();
+  const nwDays = getNextWeekDays();
 
   const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).sort((a,b) => (a.order||0) - (b.order||0));
 
@@ -2657,6 +2764,13 @@ function renderWeek() {
   const _fri = new Date(_mon); _fri.setDate(_mon.getDate() + 4);
   const _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const _weekRange = _mNames[_mon.getMonth()] + ' ' + _mon.getDate() + ' – ' + _mNames[_fri.getMonth()] + ' ' + _fri.getDate() + ', ' + _fri.getFullYear();
+
+  // Next week toggle state
+  let nwExpanded = false;
+  try { nwExpanded = localStorage.getItem('dashboard-nw-expanded-' + activeDomain) === 'true'; } catch(e) {}
+
+  // Count cards in next-week day columns + generic next-week column
+  const nwCardCount = state.cards.filter(c => c.column === 'next-week' || nwDays.some(d => d.id === c.column)).length;
 
   weekView.innerHTML = `
     <div class="week-header">
@@ -2687,6 +2801,31 @@ function renderWeek() {
               <div class="week-day-link" onclick="showTodayForDate('${dayDates[day.id + '-iso']}', '${day.id}')" title="View this day">
                 <span class="column-title">${day.label}</span>
                 ${dayDates[day.id] ? `<span class="column-date">${dayDates[day.id]}</span>` : ''}
+              </div>
+              ${cards.length > 0 ? `<span class="column-count">${cards.length}</span>` : ''}
+            </div>
+            <div class="card-list" data-column="${day.id}">
+              ${cards.map(c => renderCard(c)).join('')}
+            </div>
+            <button class="add-card-btn" onclick="showAddForm(this, '${day.id}')">+ Add</button>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="week-nw-toggle${nwExpanded ? ' expanded' : ''}" onclick="toggleNextWeek()">
+      <span class="toggle-arrow">▶</span>
+      <span class="toggle-label">Next Week</span>
+      ${nwCardCount > 0 ? `<span class="column-count" style="font-size:11px;color:var(--accent);background:var(--accent-light);padding:1px 7px;border-radius:10px;font-weight:600">${nwCardCount}</span>` : ''}
+    </div>
+    <div class="week-nw-row${nwExpanded ? ' visible' : ''}">
+      ${nwDays.map(day => {
+        const cards = state.cards.filter(c => c.column === day.id).sort((a,b) => (a.order||0) - (b.order||0));
+        return `
+          <div class="week-column" data-week-col="${day.id}">
+            <div class="week-column-header">
+              <div>
+                <span class="column-title">${day.label}</span>
+                ${nwDayDates[day.id] ? `<span class="column-date">${nwDayDates[day.id]}</span>` : ''}
               </div>
               ${cards.length > 0 ? `<span class="column-count">${cards.length}</span>` : ''}
             </div>
@@ -2737,6 +2876,17 @@ function renderWeek() {
   });
 }
 
+function toggleNextWeek() {
+  let expanded = false;
+  try { expanded = localStorage.getItem('dashboard-nw-expanded-' + activeDomain) === 'true'; } catch(e) {}
+  expanded = !expanded;
+  try { localStorage.setItem('dashboard-nw-expanded-' + activeDomain, expanded); } catch(e) {}
+  const toggle = document.querySelector('.week-nw-toggle');
+  const row = document.querySelector('.week-nw-row');
+  if (toggle) toggle.classList.toggle('expanded', expanded);
+  if (row) row.classList.toggle('visible', expanded);
+}
+
 // ── Today View ──
 function getTodayColumnId() {
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -2754,6 +2904,11 @@ function getColumnForDate(dateStr) {
   const dayDates = getDayDates();
   for (const day of THIS_WEEK_DAYS) {
     if (dayDates[day.id + '-iso'] === dateStr) return day.id;
+  }
+  const nwDayDates = getNextWeekDayDates();
+  const nwDays = getNextWeekDays();
+  for (const day of nwDays) {
+    if (nwDayDates[day.id + '-iso'] === dateStr) return day.id;
   }
   return null;
 }
