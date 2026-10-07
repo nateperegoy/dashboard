@@ -1686,7 +1686,7 @@ body {
     <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')">Personal</button>
     <button class="domain-btn" data-domain="home" onclick="switchDomain('home')">Home</button>
     <button class="domain-btn" data-domain="work" onclick="switchDomain('work')">Work</button>
-    <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()">P+W Today</button>
+    <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()">P+H Today</button>
   </div>
   <div class="header-row">
     <div class="header-nav">
@@ -2853,7 +2853,7 @@ function showToday(targetDate, targetCol) {
         <div class="todoist-section">
           <div class="todoist-header">
             <div class="todoist-logo">✓</div>
-            <span class="todoist-header-title">${combinedToday ? '#personal + #work · today' : '#' + getTodoistProject().toLowerCase() + ' · today'}</span>
+            <span class="todoist-header-title">${combinedToday ? '#personal + #home · today' : '#' + getTodoistProject().toLowerCase() + ' · today'}</span>
             <a href="https://app.todoist.com/app/task/add" target="_blank" rel="noopener" class="todoist-add-btn">+ Add</a>
           </div>
           <div id="todoist-container"></div>
@@ -3434,7 +3434,7 @@ async function fetchTodoistTasks() {
   renderTodoistSection();
 
   try {
-    const projects = combinedToday ? ['PERSONAL', 'WORK'] : [getTodoistProject()];
+    const projects = combinedToday ? ['PERSONAL', 'HOME'] : [getTodoistProject()];
     const allTasks = [];
     for (const proj of projects) {
       const params = new URLSearchParams();
