@@ -112,6 +112,7 @@ body {
 }
 .domain-btn:hover { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); }
 .domain-btn.active-domain { background: rgba(255,255,255,0.22); color: #fff; }
+.domain-btn-combo { margin-left: 8px; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 12px; border-radius: 6px; }
 .app-header .btn {
   background: rgba(255,255,255,0.08);
   border: none;
@@ -1685,6 +1686,7 @@ body {
     <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')">Personal</button>
     <button class="domain-btn" data-domain="home" onclick="switchDomain('home')">Home</button>
     <button class="domain-btn" data-domain="work" onclick="switchDomain('work')">Work</button>
+    <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()">P+W Today</button>
   </div>
   <div class="header-row">
     <div class="header-nav">
@@ -1888,7 +1890,8 @@ function applyDomainTheme() {
 }
 
 async function switchDomain(domain) {
-  if (domain === activeDomain) return;
+  if (domain === activeDomain && !combinedToday) return;
+  combinedToday = false;
   activeDomain = domain;
   try { localStorage.setItem('dashboard-active-domain', domain); } catch(e) {}
   // Update legacy aliases
@@ -1910,6 +1913,19 @@ async function switchDomain(domain) {
   else if (currentView === 'punch') { await loadPunch(); showPunch(); }
   else if (currentView === 'archive') { await loadArchive(); showArchive(); }
   else showHorizons();
+}
+
+let combinedToday = false;
+
+function showCombinedToday() {
+  combinedToday = true;
+  // Highlight the combo button
+  document.querySelectorAll('.domain-btn').forEach(btn => {
+    btn.classList.toggle('active-domain', btn.dataset.domain === 'combined');
+  });
+  // Switch to today view with combined fetch
+  setActiveTab('today');
+  showToday();
 }
 
 // Listen for color scheme changes to update domain theme
@@ -2837,7 +2853,7 @@ function showToday(targetDate, targetCol) {
         <div class="todoist-section">
           <div class="todoist-header">
             <div class="todoist-logo">✓</div>
-            <span class="todoist-header-title">#work &amp; today</span>
+            <span class="todoist-header-title">${combinedToday ? '#personal + #work · today' : '#' + getTodoistProject().toLowerCase() + ' · today'}</span>
             <a href="https://app.todoist.com/app/task/add" target="_blank" rel="noopener" class="todoist-add-btn">+ Add</a>
           </div>
           <div id="todoist-container"></div>
@@ -3418,23 +3434,28 @@ async function fetchTodoistTasks() {
   renderTodoistSection();
 
   try {
-    const params = new URLSearchParams();
-    if (todayViewDate) params.set('date', todayViewDate);
-    params.set('project', getTodoistProject());
-    const resp = await fetch('/api/todoist?' + params.toString());
-    if (!resp.ok) {
-      const data = await resp.json().catch(() => ({}));
-      if (resp.status === 500 && data.error && data.error.includes('not configured')) {
-        todoistError = 'not_configured';
-      } else {
-        todoistError = 'unavailable';
+    const projects = combinedToday ? ['PERSONAL', 'WORK'] : [getTodoistProject()];
+    const allTasks = [];
+    for (const proj of projects) {
+      const params = new URLSearchParams();
+      if (todayViewDate) params.set('date', todayViewDate);
+      params.set('project', proj);
+      const resp = await fetch('/api/todoist?' + params.toString());
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        if (resp.status === 500 && data.error && data.error.includes('not configured')) {
+          todoistError = 'not_configured';
+        } else {
+          todoistError = 'unavailable';
+        }
+        todoistLoading = false;
+        renderTodoistSection();
+        return;
       }
-      todoistLoading = false;
-      renderTodoistSection();
-      return;
+      const data = await resp.json();
+      allTasks.push(...(data.tasks || []));
     }
-    const data = await resp.json();
-    todoistTasks = data.tasks || [];
+    todoistTasks = allTasks;
     todoistError = null;
   } catch (e) {
     todoistError = 'unavailable';
