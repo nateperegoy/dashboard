@@ -101,11 +101,11 @@ body {
 .domain-btn {
   background: rgba(255,255,255,0.08);
   border: none;
-  color: rgba(255,255,255,0.5);
-  border-radius: 6px;
-  padding: 3px 12px;
-  font-size: 11px;
-  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.03em;
   cursor: pointer;
   font-family: inherit;
@@ -1722,10 +1722,10 @@ body {
 <div class="app-header">
   <div class="header-row">
     <div class="domain-switcher">
-      <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')">Personal</button>
-      <button class="domain-btn" data-domain="home" onclick="switchDomain('home')">Home</button>
-      <button class="domain-btn" data-domain="work" onclick="switchDomain('work')">Work</button>
-      <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()">P+H Today</button>
+      <button class="domain-btn" data-domain="personal" onclick="switchDomain('personal')">P</button>
+      <button class="domain-btn" data-domain="home" onclick="switchDomain('home')">H</button>
+      <button class="domain-btn" data-domain="work" onclick="switchDomain('work')">W</button>
+      <button class="domain-btn domain-btn-combo" data-domain="combined" onclick="showCombinedToday()">P+H</button>
     </div>
     <div class="header-nav">
       <button class="btn" id="tab-today" onclick="showToday()" aria-label="Today"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M3.8 12.2l1-1M11.2 4.8l1-1"/></svg> Today</button>
@@ -1824,9 +1824,9 @@ const DOMAINS = {
   },
   personal: {
     label: 'Personal',
-    accent: { light: '#b57078', dark: '#c88a90' },
-    accentLight: { light: '#f6edee', dark: '#362428' },
-    dragGhost: { light: 'rgba(181, 112, 120, 0.06)', dark: 'rgba(200, 138, 144, 0.08)' },
+    accent: { light: '#6a8a7a', dark: '#88ac9a' },
+    accentLight: { light: '#edf3f0', dark: '#1e2e28' },
+    dragGhost: { light: 'rgba(106, 138, 122, 0.06)', dark: 'rgba(136, 172, 154, 0.08)' },
     storageKey: 'personal-dashboard-v1',
     blobKey: 'board-personal',
     todoistProject: 'PERSONAL',
@@ -1867,9 +1867,9 @@ const DOMAINS = {
   },
   home: {
     label: 'Home',
-    accent: { light: '#c49868', dark: '#d4a878' },
-    accentLight: { light: '#f6f1eb', dark: '#362e22' },
-    dragGhost: { light: 'rgba(196, 152, 104, 0.06)', dark: 'rgba(212, 168, 120, 0.08)' },
+    accent: { light: '#8a7a6a', dark: '#a89888' },
+    accentLight: { light: '#f2efec', dark: '#2e2a24' },
+    dragGhost: { light: 'rgba(138, 122, 106, 0.06)', dark: 'rgba(168, 152, 136, 0.08)' },
     storageKey: 'home-dashboard-v1',
     blobKey: 'board-home',
     todoistProject: 'HOME',
