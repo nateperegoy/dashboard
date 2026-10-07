@@ -42,10 +42,10 @@ export default async function handler(req, res) {
   try {
     const token = await getAccessToken(SERVICE_ACCOUNT);
 
-    // Today's boundaries in Denver
+    // Use ?date=YYYY-MM-DD if provided, otherwise today in Denver
     const now = new Date();
     const denver = (d, opts) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Denver', ...opts }).format(d);
-    const todayStr = denver(now, { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const todayStr = req.query.date || denver(now, { year: 'numeric', month: '2-digit', day: '2-digit' });
     const timeMin = `${todayStr}T00:00:00-06:00`;
     const timeMax = `${todayStr}T23:59:59-06:00`;
 

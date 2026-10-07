@@ -91,18 +91,6 @@ body {
   border-bottom: 1px solid var(--border);
   padding: 16px 24px 12px;
 }
-.app-header h1 {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 2px;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-}
-.app-header .subtitle {
-  font-size: 13px;
-  color: rgba(255,255,255,0.65);
-  margin: 0;
-}
 .app-header .btn {
   background: rgba(255,255,255,0.08);
   border: none;
@@ -148,7 +136,7 @@ body {
 .header-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
   min-width: 0;
@@ -198,6 +186,10 @@ body {
 .btn-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* Columns container */
+.board-header {
+  padding: 24px 24px 0;
+}
+.board-header[hidden] { display: none !important; }
 .board[hidden] { display: none !important; }
 .board {
   display: grid;
@@ -753,6 +745,8 @@ body {
 }
 .week-column-header .column-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
 .week-column-header .column-date { font-size: 11px; color: var(--text-muted); font-weight: 400; margin-left: 6px; letter-spacing: 0; text-transform: none; }
+.week-column-header .week-day-link { cursor: pointer; }
+.week-column-header .week-day-link:hover .column-title { text-decoration: underline; }
 .week-column-header .column-count { font-size: 11px; color: var(--accent); background: var(--accent-light); padding: 1px 7px; border-radius: 10px; font-variant-numeric: tabular-nums; font-weight: 600; }
 
 /* Today view */
@@ -927,6 +921,38 @@ body {
   gap: 12px;
   margin-bottom: 8px;
 }
+.today-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+.today-nav-btn {
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+}
+.today-nav-btn:hover {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface-hover);
+}
+.today-nav-today {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  margin: 0 2px;
+}
 .today-back {
   font-family: inherit;
   font-size: 13px;
@@ -965,8 +991,8 @@ body {
   gap: 12px;
 }
 .today-card-rock {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   margin-top: 2px;
   color: var(--card-tint, var(--text-muted));
@@ -1612,10 +1638,6 @@ body {
 
 <div class="app-header">
   <div class="header-row">
-    <div>
-      <h1>Work Dashboard</h1>
-      <p class="subtitle" id="period-label"></p>
-    </div>
     <div class="header-actions">
       <button class="btn" id="tab-today" onclick="showToday()" aria-label="Today"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1 1M11.2 11.2l1 1M3.8 12.2l1-1M11.2 4.8l1-1"/></svg> Today</button>
       <button class="btn" id="tab-week" onclick="showWeek()" aria-label="This Week"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 3V1.5M10.5 3V1.5"/></svg> This Week</button>
@@ -1626,6 +1648,9 @@ body {
   </div>
 </div>
 
+<div class="board-header" id="board-header" hidden>
+  <h1 class="week-header-title">Horizons</h1>
+</div>
 <div class="board" id="board"></div>
 
 <div class="week-view" id="week-view"></div>
@@ -1850,6 +1875,7 @@ function getDayDates() {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return months[d.getMonth()] + ' ' + d.getDate();
   };
+  const iso = (d) => d.toLocaleDateString('en-CA');
   const tue = new Date(mon); tue.setDate(mon.getDate() + 1);
   const wed = new Date(mon); wed.setDate(mon.getDate() + 2);
   const thu = new Date(mon); thu.setDate(mon.getDate() + 3);
@@ -1859,6 +1885,10 @@ function getDayDates() {
     'tw-wed': fmt(wed),
     'tw-thu': fmt(thu),
     'tw-fri': fmt(fri),
+    'tw-tue-iso': iso(tue),
+    'tw-wed-iso': iso(wed),
+    'tw-thu-iso': iso(thu),
+    'tw-fri-iso': iso(fri),
   };
 }
 
@@ -1888,11 +1918,11 @@ function cleanupTodoist() {
 function showHorizons() {
   cleanupTodoist();
   document.getElementById('board').hidden = false;
+  document.getElementById('board-header').hidden = false;
   document.getElementById('week-view').classList.remove('active');
   document.getElementById('today-view').classList.remove('active');
   document.getElementById('punch-view').classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
-  document.getElementById('period-label').textContent = 'Horizons';
   document.getElementById('archive-fab').hidden = false;
   setActiveTab('horizons');
   renderBoard();
@@ -2387,14 +2417,12 @@ function showWeek() {
   const punchView = document.getElementById('punch-view');
 
   board.hidden = true;
+  document.getElementById('board-header').hidden = true;
   todayView.classList.remove('active');
   punchView.classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
   weekView.classList.add('active');
   document.getElementById('archive-fab').hidden = false;
-
-  const dates = getColumnDates();
-  document.getElementById('period-label').textContent = 'This Week · ' + (dates['this-week'] || '');
   setActiveTab('week');
 
   renderWeek();
@@ -2440,7 +2468,7 @@ function renderWeek() {
         return `
           <div class="week-column" data-week-col="${day.id}">
             <div class="week-column-header">
-              <div>
+              <div class="week-day-link" onclick="showTodayForDate('${dayDates[day.id + '-iso']}', '${day.id}')" title="View this day">
                 <span class="column-title">${day.label}</span>
                 ${dayDates[day.id] ? `<span class="column-date">${dayDates[day.id]}</span>` : ''}
               </div>
@@ -2502,24 +2530,59 @@ function getTodayColumnId() {
   return map[d] || null;
 }
 
-function showToday() {
+// Track the currently viewed date in today view
+let todayViewDate = null;
+
+function getColumnForDate(dateStr) {
+  const dayDates = getDayDates();
+  for (const day of THIS_WEEK_DAYS) {
+    if (dayDates[day.id + '-iso'] === dateStr) return day.id;
+  }
+  return null;
+}
+
+function showTodayForDate(isoDate, colId) {
+  setActiveTab('today');
+  showToday(isoDate, colId);
+}
+
+function navigateDay(offset) {
+  const current = todayViewDate || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+  const d = new Date(current + 'T12:00:00');
+  d.setDate(d.getDate() + offset);
+  const newDate = d.toLocaleDateString('en-CA');
+  const newCol = getColumnForDate(newDate);
+  showToday(newDate, newCol);
+}
+
+function showToday(targetDate, targetCol) {
   cleanupTodoist();
-  const todayCol = getTodayColumnId();
+
+  // Determine which date to show
+  const now = new Date();
+  const actualTodayISO = now.toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+  const viewDate = targetDate || actualTodayISO;
+  todayViewDate = viewDate;
+  const isToday = viewDate === actualTodayISO;
+
+  const todayCol = targetCol || (isToday ? getTodayColumnId() : getColumnForDate(viewDate));
   const view = document.getElementById('today-view');
   const board = document.getElementById('board');
   const punch = document.getElementById('punch-view');
 
   board.hidden = true;
+  document.getElementById('board-header').hidden = true;
   punch.classList.remove('active');
   document.getElementById('week-view').classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
   document.getElementById('archive-fab').hidden = false;
 
-  const now = new Date();
+  // Parse the target date for display
+  const viewDateObj = new Date(viewDate + 'T12:00:00');
   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const dayName = dayNames[now.getDay()];
-  const dateStr = months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+  const dayName = dayNames[viewDateObj.getDay()];
+  const dateStr = months[viewDateObj.getMonth()] + ' ' + viewDateObj.getDate() + ', ' + viewDateObj.getFullYear();
 
   // Show day-specific cards from the week view (not Big Rocks)
   const dayCards = todayCol ? state.cards.filter(c => c.column === todayCol).sort((a,b) => (a.order||0) - (b.order||0)) : [];
@@ -2530,6 +2593,11 @@ function showToday() {
       <div>
         <h1 class="today-day-name">${dayName}</h1>
         <p class="today-date-label">${dateStr}</p>
+      </div>
+      <div class="today-nav">
+        <button class="today-nav-btn" onclick="navigateDay(-1)" title="Previous day">&#8249;</button>
+        ${!isToday ? `<button class="today-nav-btn today-nav-today" onclick="showToday()" title="Back to today">Today</button>` : ''}
+        <button class="today-nav-btn" onclick="navigateDay(1)" title="Next day">&#8250;</button>
       </div>
     </div>
     <div class="today-layout">
@@ -2595,7 +2663,6 @@ function showToday() {
   document.getElementById('week-view').classList.remove('active');
   punch.classList.remove('active');
   view.classList.add('active');
-  document.getElementById('period-label').textContent = 'Today';
   setActiveTab('today');
 
   // Make today cards sortable — syncs order back to state (and Week view)
@@ -2712,14 +2779,16 @@ function renderCalendarSlots() {
     placeCalendarBlock(body, startMin, endMin, block.title, 'cal-block', block, null);
   });
 
-  // Now-line
+  // Now-line (only show when viewing actual today)
   const now = new Date();
+  const actualTodayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+  const isViewingToday = !todayViewDate || todayViewDate === actualTodayStr;
   const nowH = parseInt(now.toLocaleString('en-US', { timeZone: 'America/Denver', hour: 'numeric', hour12: false }));
   const nowM = parseInt(now.toLocaleString('en-US', { timeZone: 'America/Denver', minute: 'numeric' }));
   const nowMin = nowH * 60 + nowM;
   const calStartMin = CAL_START_HOUR * 60;
   const calEndMin = CAL_END_HOUR * 60;
-  if (nowMin >= calStartMin && nowMin < calEndMin) {
+  if (isViewingToday && nowMin >= calStartMin && nowMin < calEndMin) {
     const slotH = 32; // slot height in px
     const totalSlots = (CAL_END_HOUR - CAL_START_HOUR) * (60 / CAL_SLOT_MIN);
     const pxPerMin = (totalSlots * slotH) / (calEndMin - calStartMin);
@@ -2845,7 +2914,8 @@ function enableTodoistDragToCalendar() {
 async function fetchCalendarEvents() {
   const body = document.getElementById('today-calendar-body');
   try {
-    const resp = await fetch('/api/calendar');
+    const dateParam = todayViewDate ? `?date=${todayViewDate}` : '';
+    const resp = await fetch('/api/calendar' + dateParam);
     if (!resp.ok) {
       // Calendar not configured — render slots without events
       calendarEvents = [];
@@ -2892,12 +2962,12 @@ function showPunch() {
   const today = document.getElementById('today-view');
 
   board.hidden = true;
+  document.getElementById('board-header').hidden = true;
   document.getElementById('week-view').classList.remove('active');
   today.classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
   view.classList.add('active');
   document.getElementById('archive-fab').hidden = false;
-  document.getElementById('period-label').textContent = 'Ideas';
   setActiveTab('punch');
   renderPunch();
 }
@@ -3147,7 +3217,8 @@ async function fetchTodoistTasks() {
   renderTodoistSection();
 
   try {
-    const resp = await fetch('/api/todoist');
+    const dateParam = todayViewDate ? `?date=${todayViewDate}` : '';
+    const resp = await fetch('/api/todoist' + dateParam);
     if (!resp.ok) {
       const data = await resp.json().catch(() => ({}));
       if (resp.status === 500 && data.error && data.error.includes('not configured')) {
@@ -3370,11 +3441,11 @@ function showArchive(filter) {
   const punchView = document.getElementById('punch-view');
 
   board.hidden = true;
+  document.getElementById('board-header').hidden = true;
   weekView.classList.remove('active');
   todayView.classList.remove('active');
   punchView.classList.remove('active');
   view.classList.add('active');
-  document.getElementById('period-label').textContent = 'Archive';
   setActiveTab('archive');
 
   // Hide the FAB while in archive view
@@ -3580,7 +3651,7 @@ function setupArchiveDragTarget() {
   else if (startView === 'today') showToday();
   else if (startView === 'punch') showPunch();
   else if (startView === 'archive') showArchive();
-  else { document.getElementById('period-label').textContent = 'Horizons'; setActiveTab('horizons'); }
+  else { showHorizons(); }
 })();
 </script>
 

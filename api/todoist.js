@@ -30,8 +30,8 @@ export default async function handler(req, res) {
       });
 
       // 2. Fetch tasks per project (parallel) — much faster than fetching all tasks
-      // Use user's timezone for accurate "today" boundary
-      const userToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+      // Use ?date=YYYY-MM-DD if provided, otherwise today in Denver
+      const userToday = req.query.date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
       const fetches = workIds.map(async (pid) => {
         let projectTasks = [];
         let cursor = null;
