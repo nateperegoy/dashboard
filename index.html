@@ -3291,11 +3291,12 @@ function renderTodoistSection() {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
 
   // Apply custom order if saved, otherwise pin + priority sort
+  // "WORK STARTUP" is always pinned to the very top regardless of sort/drag order
   const customOrder = getTodoistOrder();
+  const alwaysTopNames = ['work startup'];
   const pinnedNames = ['work startup', 'preview week'];
   let sortedTasks;
   if (customOrder.length > 0) {
-    // Use saved order; new tasks (not in saved order) go at the end sorted by priority
     const orderMap = {};
     customOrder.forEach((id, i) => orderMap[id] = i);
     const known = todoistTasks.filter(t => t.id in orderMap);
@@ -3317,6 +3318,10 @@ function renderTodoistSection() {
       return (b.priority || 1) - (a.priority || 1);
     });
   }
+  // Always force "WORK STARTUP" to the top, even after drag reorder
+  const topTasks = sortedTasks.filter(t => alwaysTopNames.some(n => (t.content || '').toLowerCase().includes(n)));
+  const restTasks = sortedTasks.filter(t => !alwaysTopNames.some(n => (t.content || '').toLowerCase().includes(n)));
+  sortedTasks = [...topTasks, ...restTasks];
 
   container.innerHTML = sortedTasks.map(t => {
     // Todoist REST API: due.date, priority is 1-4 (4=most urgent)
