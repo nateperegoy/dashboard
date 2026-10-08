@@ -1799,6 +1799,13 @@ body {
 
 <script>
 // ── Domain Configuration ──
+const COMBINED_THEME = {
+  accent: { light: '#d45a3a', dark: '#e06a4a' },
+  accentLight: { light: '#faf0ec', dark: '#36211a' },
+  dragGhost: { light: 'rgba(212, 90, 58, 0.06)', dark: 'rgba(224, 106, 74, 0.08)' },
+  label: 'P+H'
+};
+
 const DOMAINS = {
   work: {
     label: 'Work',
@@ -1999,10 +2006,23 @@ let combinedToday = false;
 
 function showCombinedToday() {
   combinedToday = true;
+  // Apply combined theme colors
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
+    document.documentElement.getAttribute('data-theme') === 'dark';
+  const mode = isDark ? 'dark' : 'light';
+  const root = document.documentElement;
+  root.style.setProperty('--accent', COMBINED_THEME.accent[mode]);
+  root.style.setProperty('--accent-light', COMBINED_THEME.accentLight[mode]);
+  root.style.setProperty('--drag-ghost', COMBINED_THEME.dragGhost[mode]);
+  const header = document.querySelector('.app-header');
+  if (header) header.style.background = COMBINED_THEME.accent[mode];
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', COMBINED_THEME.accent[mode]);
   // Highlight the combo button
   document.querySelectorAll('.domain-btn').forEach(btn => {
     btn.classList.toggle('active-domain', btn.dataset.domain === 'combined');
   });
+  document.title = 'P+H Dashboard';
   // Switch to today view with combined fetch
   setActiveTab('today');
   showToday();
