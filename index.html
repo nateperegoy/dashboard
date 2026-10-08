@@ -3832,6 +3832,7 @@ function archiveCard(cardId) {
     ...card,
     archivedAt: now.toISOString(),
     archivedFrom: card.column,
+    domain: activeDomain,
   });
   state.cards = state.cards.filter(c => c.id !== cardId);
   saveState();
@@ -3891,11 +3892,18 @@ function showArchive(filter) {
     displayMonths = Array.from({length: 12}, (_, i) => [year, i]);
   }
 
+  // Filter archive cards to the active domain(s)
+  const domainFilter = combinedToday
+    ? (c => c.domain === 'personal' || c.domain === 'home' || !c.domain)
+    : (c => c.domain === activeDomain || !c.domain);
+  const domainCards = archiveState.cards.filter(domainFilter);
+  const domainLabel = combinedToday ? 'P+H' : getDomainConfig().label;
+
   // Build month data
   const monthData = displayMonths.map(([y, m]) => {
     const key = y + '-' + String(m + 1).padStart(2, '0');
     const label = new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long' });
-    const cards = archiveState.cards.filter(c => {
+    const cards = domainCards.filter(c => {
       const d = new Date(c.archivedAt);
       return d.getFullYear() === y && d.getMonth() === m;
     }).sort((a, b) => new Date(b.archivedAt) - new Date(a.archivedAt));
@@ -3903,7 +3911,7 @@ function showArchive(filter) {
   });
 
   // Count totals for year
-  const yearTotal = archiveState.cards.filter(c => new Date(c.archivedAt).getFullYear() === year).length;
+  const yearTotal = domainCards.filter(c => new Date(c.archivedAt).getFullYear() === year).length;
 
   const filterBtn = (f, label) => {
     const active = archiveFilter === f ? ' active' : '';
@@ -3912,7 +3920,7 @@ function showArchive(filter) {
 
   let html = `
     <div class="archive-header">
-      <h1 class="archive-title">Archive</h1>
+      <h1 class="archive-title">${domainLabel} Archive</h1>
       <p class="archive-subtitle">Completed focus areas${yearTotal ? ` · ${yearTotal} this year` : ''}</p>
       <div class="archive-filter-bar">
         ${filterBtn('year', year)}
