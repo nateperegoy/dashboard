@@ -1720,12 +1720,23 @@ body {
 @media (max-width: 700px) {
   .board { padding: 0 4px 24px; }
   .column { min-width: 180px; }
-  .app-header { padding: 10px 12px 8px; }
-  .header-row { flex-wrap: wrap; justify-content: center; gap: 6px; }
-  .domain-switcher { position: static; order: -1; width: 100%; justify-content: center; }
-  .header-nav { margin: 0; gap: 6px; }
-  .header-secondary { position: static; gap: 6px; margin-left: 6px; }
-  .app-header .btn { min-width: 44px; padding: 5px 7px; font-size: 9px; }
+  .app-header { padding: 8px 8px 6px; gap: 4px; }
+  .header-row { flex-wrap: wrap; justify-content: center; gap: 4px; }
+  .domain-switcher { position: static; order: -1; width: 100%; justify-content: center; gap: 3px; }
+  .domain-btn { min-width: 40px; padding: 4px 6px; font-size: 8px; border-radius: 8px; }
+  .domain-btn .domain-letter { font-size: 15px; line-height: 18px; height: 18px; }
+  .domain-btn-combo { margin-left: 4px; padding-left: 8px; }
+  .header-nav { margin: 0; gap: 3px; }
+  .header-secondary { position: static; gap: 3px; margin-left: auto; }
+  .app-header .btn { min-width: 38px; padding: 4px 6px; font-size: 8px; border-radius: 8px; }
+  .app-header .btn svg { width: 18px; height: 18px; }
+  .app-header .btn.settings-btn svg { width: 18px; height: 18px; }
+}
+@media (max-width: 400px) {
+  .domain-btn { min-width: 34px; padding: 3px 5px; }
+  .domain-btn .domain-letter { font-size: 13px; line-height: 16px; height: 16px; }
+  .app-header .btn { min-width: 32px; padding: 3px 5px; font-size: 7px; }
+  .app-header .btn svg { width: 16px; height: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
