@@ -1881,9 +1881,9 @@ const DOMAINS = {
   },
   home: {
     label: 'Home',
-    accent: { light: '#d4874a', dark: '#dea06a' },
-    accentLight: { light: '#faf4ee', dark: '#332a1e' },
-    dragGhost: { light: 'rgba(212, 135, 74, 0.06)', dark: 'rgba(222, 160, 106, 0.08)' },
+    accent: { light: '#cf7a3c', dark: '#db9458' },
+    accentLight: { light: '#faf3eb', dark: '#34281a' },
+    dragGhost: { light: 'rgba(207, 122, 60, 0.06)', dark: 'rgba(219, 148, 88, 0.08)' },
     storageKey: 'home-dashboard-v1',
     blobKey: 'board-home',
     todoistProject: 'HOME',
@@ -2290,40 +2290,40 @@ function renderBoard() {
       const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).sort((a,b) => (a.order||0) - (b.order||0));
       colEl.innerHTML = `
         ${dateStr ? `<div class="column-sub-date">${dateStr}</div>` : ''}
+        <button class="add-card-btn" onclick="showAddForm(this, '${THIS_WEEK_ROCKS.id}')">+ Add</button>
         <div class="card-list" data-column="${THIS_WEEK_ROCKS.id}">
           ${rocksCards.map(c => renderCard(c)).join('')}
         </div>
-        <button class="add-card-btn" onclick="showAddForm(this, '${THIS_WEEK_ROCKS.id}')">+ Add</button>
       `;
     } else if (col.hasNextWeekDays) {
       const nwDays = getDomainConfig().nextWeekDays || [];
       const nwCards = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column));
       colEl.innerHTML = `
         ${dateStr ? `<div class="column-sub-date">${dateStr}</div>` : ''}
+        <button class="add-card-btn" onclick="showAddForm(this, '${col.id}')">+ Add</button>
         <div class="card-list" data-column="${col.id}">
           ${nwCards.sort((a,b) => (a.order||0) - (b.order||0)).map(c => renderCard(c)).join('')}
         </div>
-        <button class="add-card-btn" onclick="showAddForm(this, '${col.id}')">+ Add</button>
       `;
     } else if (col.hasMonths) {
       colEl.innerHTML = LATER_MONTHS.map(month => {
         const monthCards = state.cards.filter(c => c.column === month.id);
         return `
           <div class="column-sub-date">${month.label}</div>
+          <button class="add-card-btn" onclick="showAddForm(this, '${month.id}')">+ Add</button>
           <div class="card-list later-month-list" data-column="${month.id}">
             ${monthCards.map(c => renderCard(c)).join('')}
           </div>
-          <button class="add-card-btn" onclick="showAddForm(this, '${month.id}')">+ Add</button>
         `;
       }).join('');
     } else {
       const cards = state.cards.filter(c => c.column === col.id);
       colEl.innerHTML = `
         <div class="column-sub-date${dateStr ? '' : ' spacer'}">${dateStr || '&nbsp;'}</div>
+        <button class="add-card-btn" onclick="showAddForm(this, '${col.id}')">+ Add</button>
         <div class="card-list" data-column="${col.id}">
           ${cards.map(c => renderCard(c)).join('')}
         </div>
-        <button class="add-card-btn" onclick="showAddForm(this, '${col.id}')">+ Add</button>
       `;
     }
     board.appendChild(colEl);
