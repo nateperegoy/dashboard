@@ -3080,7 +3080,16 @@ function showToday(targetDate, targetCol) {
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
       draggable: '.today-card',
+      setData: function(dataTransfer, dragEl) {
+        dataTransfer.setData('text/plain', dragEl.dataset.cardId);
+      },
+      onStart: function() {
+        const fab = document.getElementById('archive-fab');
+        if (fab) fab.classList.add('drag-active');
+      },
       onEnd: function(evt) {
+        const fab = document.getElementById('archive-fab');
+        if (fab) fab.classList.remove('drag-active');
         const col = evt.to.dataset.column;
         const orderedIds = Array.from(evt.to.querySelectorAll('.today-card')).map(el => el.dataset.cardId);
         orderedIds.forEach((id, i) => {
@@ -4050,7 +4059,13 @@ function setupArchiveDragTarget() {
   fab.addEventListener('drop', (e) => {
     e.preventDefault();
     fab.classList.remove('drag-over');
-    const cardId = e.dataTransfer.getData('text/plain');
+    const raw = e.dataTransfer.getData('text/plain');
+    if (!raw) return;
+    let cardId = raw;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.id) cardId = parsed.id;
+    } catch(err) { /* plain card ID from SortableJS */ }
     if (cardId) archiveCard(cardId);
   });
 }
