@@ -2970,8 +2970,8 @@ function showToday(targetDate, targetCol) {
   const dayName = dayNames[viewDateObj.getDay()];
   const dateStr = months[viewDateObj.getMonth()] + ' ' + viewDateObj.getDate() + ', ' + viewDateObj.getFullYear();
 
-  // Show day-specific cards from the week view (not Big Rocks)
-  const dayCards = todayCol ? state.cards.filter(c => c.column === todayCol).sort((a,b) => (a.order||0) - (b.order||0)) : [];
+  // Show day-specific cards from the week view (not Big Rocks) — skip in combined mode
+  const dayCards = (todayCol && !combinedToday) ? state.cards.filter(c => c.column === todayCol).sort((a,b) => (a.order||0) - (b.order||0)) : [];
   const dayLabel = todayCol ? (THIS_WEEK_DAYS.find(d => d.id === todayCol)?.label || 'Today') : null;
 
   let html = `
