@@ -316,7 +316,7 @@ body {
   position: absolute;
   inset: 0;
   background: linear-gradient(145deg, var(--card-tint, transparent) 0%, transparent 50%);
-  opacity: 0.06;
+  opacity: 0.13;
   pointer-events: none;
   border-radius: inherit;
   transition: opacity 0.25s ease;
@@ -326,7 +326,7 @@ body {
   border-color: color-mix(in srgb, var(--card-tint, var(--border)) 30%, var(--border));
   transform: translateY(-2px);
 }
-.card:hover::before { opacity: 0.12; }
+.card:hover::before { opacity: 0.22; }
 .card.sortable-chosen { box-shadow: 0 8px 28px rgba(0,0,0,0.12); border-color: var(--accent); cursor: grabbing; transform: translateY(-3px) scale(1.02); }
 .card.sortable-ghost { opacity: 0.25; }
 
@@ -1096,14 +1096,14 @@ body {
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg, var(--card-tint, transparent) 0%, transparent 60%);
-  opacity: 0.08;
+  opacity: 0.15;
   pointer-events: none;
   border-radius: inherit;
   transition: opacity 0.2s ease;
 }
 .today-card { cursor: grab; }
 .today-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06); transform: translateY(-1px); }
-.today-card:hover::before { opacity: 0.14; }
+.today-card:hover::before { opacity: 0.25; }
 .today-card.sortable-chosen { box-shadow: var(--shadow-md); cursor: grabbing; transform: translateY(-2px); }
 .today-card.sortable-ghost { opacity: 0.3; }
 .today-card-bar {
