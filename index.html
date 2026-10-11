@@ -1398,6 +1398,113 @@ body {
   50% { transform: scale(1.1); box-shadow: 0 4px 16px rgba(74,125,172,0.3); }
 }
 
+/* Quick-add floating button */
+.quick-add-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 108px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--column-header-bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 300;
+  z-index: 100;
+  transition: background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.quick-add-fab:hover { color: var(--accent); background: var(--card-bg); transform: scale(1.08); }
+
+/* Quick-add modal */
+.quick-add-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 16px;
+}
+.quick-add-overlay.open { display: flex; }
+.quick-add-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  animation: quick-add-slide-up 0.2s ease;
+}
+@keyframes quick-add-slide-up {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.quick-add-panel h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.quick-add-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--card-bg, transparent);
+  color: var(--text);
+  box-sizing: border-box;
+  margin-bottom: 14px;
+}
+.quick-add-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.quick-add-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.quick-add-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.quick-add-chip {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card-bg, transparent);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.quick-add-chip:hover { border-color: var(--accent); color: var(--accent); }
+.quick-add-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.quick-add-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 /* Archive view */
 .archive-view {
   display: none;
@@ -1730,6 +1837,10 @@ body {
   .app-header .btn { min-width: 38px; padding: 4px 6px; font-size: 8px; border-radius: 8px; }
   .app-header .btn svg { width: 18px; height: 18px; }
   .app-header .btn.settings-btn svg { width: 18px; height: 18px; }
+  .archive-fab, .quick-add-fab { width: 56px; height: 56px; bottom: 16px; }
+  .archive-fab { right: 16px; }
+  .quick-add-fab { right: 84px; font-size: 28px; }
+  .archive-fab svg { width: 24px; height: 24px; }
 }
 @media (max-width: 400px) {
   .domain-btn { min-width: 34px; padding: 3px 5px; }
@@ -1776,6 +1887,12 @@ body {
 <div class="punch-view" id="punch-view"></div>
 
 <div class="archive-view" id="archive-view"></div>
+
+<button class="quick-add-fab" id="quick-add-fab" onclick="openQuickAdd()" title="Quick Add">+</button>
+
+<div class="quick-add-overlay" id="quick-add-overlay" onclick="if(event.target===this)closeQuickAdd()">
+  <div class="quick-add-panel" id="quick-add-panel"></div>
+</div>
 
 <button class="archive-fab" id="archive-fab" onclick="showArchive()" title="Archive">
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
@@ -2272,6 +2389,7 @@ function showHorizons() {
   document.getElementById('punch-view').classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
   document.getElementById('archive-fab').hidden = false;
+  document.getElementById('quick-add-fab').hidden = false;
   setActiveTab('horizons');
   renderBoard();
 }
@@ -2604,9 +2722,11 @@ function showAddForm(btn, columnId) {
   document.querySelectorAll('.add-form').forEach(f => f.remove());
   document.querySelectorAll('.add-card-btn').forEach(b => b.hidden = false);
 
-  // Hide archive FAB so it doesn't overlap the form
+  // Hide FABs so they don't overlap the form
   const archiveFab = document.getElementById('archive-fab');
   if (archiveFab) archiveFab.style.display = 'none';
+  const quickAddFab = document.getElementById('quick-add-fab');
+  if (quickAddFab) quickAddFab.style.display = 'none';
 
   btn.hidden = true;
   const form = document.createElement('div');
@@ -2649,9 +2769,11 @@ function cancelAdd(el) {
   const btn = form.nextElementSibling;
   form.remove();
   if (btn) btn.hidden = false;
-  // Restore archive FAB
+  // Restore FABs
   const archiveFab = document.getElementById('archive-fab');
   if (archiveFab) archiveFab.style.display = '';
+  const quickAddFab = document.getElementById('quick-add-fab');
+  if (quickAddFab) quickAddFab.style.display = '';
 }
 
 let _addingCard = false;
@@ -2674,9 +2796,11 @@ function submitAdd(el, columnId) {
   const addBtn = form.nextElementSibling;
   form.remove();
   if (addBtn) addBtn.hidden = false;
-  // Restore archive FAB
+  // Restore FABs
   const archiveFab = document.getElementById('archive-fab');
   if (archiveFab) archiveFab.style.display = '';
+  const quickAddFab = document.getElementById('quick-add-fab');
+  if (quickAddFab) quickAddFab.style.display = '';
 
   state.cards.push({
     id: generateId(),
@@ -2697,6 +2821,116 @@ function submitAdd(el, columnId) {
   else renderBoard();
 
   _addingCard = false;
+}
+
+// ── Quick Add ──
+function openQuickAdd() {
+  const panel = document.getElementById('quick-add-panel');
+  const domainKeys = Object.keys(DOMAINS);
+  const currentDomain = activeDomain;
+
+  panel.innerHTML = `
+    <h3>Quick Add</h3>
+    <input type="text" class="quick-add-input" id="quick-add-title" placeholder="What needs to get done?" autofocus>
+    <div class="quick-add-section-label">Domain</div>
+    <div class="quick-add-chips" id="quick-add-domains">
+      ${domainKeys.map(k => `
+        <button class="quick-add-chip${k === currentDomain ? ' active' : ''}" data-domain="${k}" onclick="selectQuickAddDomain('${k}')">${DOMAINS[k].label}</button>
+      `).join('')}
+    </div>
+    <div class="quick-add-section-label">Place in</div>
+    <div class="quick-add-chips" id="quick-add-columns"></div>
+    <div class="quick-add-actions">
+      <button class="btn" onclick="closeQuickAdd()" style="font-size:13px;padding:6px 14px">Cancel</button>
+      <button class="btn btn-primary" onclick="submitQuickAdd()" style="font-size:13px;padding:6px 14px">Add</button>
+    </div>
+  `;
+
+  renderQuickAddColumns(currentDomain);
+
+  document.getElementById('quick-add-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('quick-add-title').focus(), 50);
+
+  // Enter to submit
+  document.getElementById('quick-add-title').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitQuickAdd(); }
+    if (e.key === 'Escape') closeQuickAdd();
+  });
+}
+
+function renderQuickAddColumns(domainKey) {
+  const cols = DOMAINS[domainKey].columns;
+  const container = document.getElementById('quick-add-columns');
+  if (!container) return;
+  container.innerHTML = cols.map((col, i) => `
+    <button class="quick-add-chip${i === 0 ? ' active' : ''}" data-column="${col.id}" onclick="selectQuickAddColumn(this)">${col.label}</button>
+  `).join('');
+}
+
+function selectQuickAddDomain(domainKey) {
+  document.querySelectorAll('#quick-add-domains .quick-add-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector(`#quick-add-domains .quick-add-chip[data-domain="${domainKey}"]`).classList.add('active');
+  renderQuickAddColumns(domainKey);
+}
+
+function selectQuickAddColumn(el) {
+  el.closest('.quick-add-chips').querySelectorAll('.quick-add-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function closeQuickAdd() {
+  document.getElementById('quick-add-overlay').classList.remove('open');
+}
+
+function submitQuickAdd() {
+  const title = document.getElementById('quick-add-title').value.trim();
+  if (!title) { document.getElementById('quick-add-title').focus(); return; }
+
+  const domainChip = document.querySelector('#quick-add-domains .quick-add-chip.active');
+  const colChip = document.querySelector('#quick-add-columns .quick-add-chip.active');
+  if (!domainChip || !colChip) return;
+
+  const targetDomain = domainChip.dataset.domain;
+  const targetColumn = colChip.dataset.column;
+
+  // Switch to the target domain if different, load its state
+  const needsSwitch = targetDomain !== activeDomain;
+  if (needsSwitch) {
+    saveState();
+    activeDomain = targetDomain;
+    try { localStorage.setItem('dashboard-active-domain', activeDomain); } catch(e) {}
+    COLUMNS = getDomainConfig().columns;
+    applyDomainTheme();
+    loadState();
+  }
+
+  // Use first project as default
+  const projectId = state.projects[0]?.id;
+
+  state.cards.push({
+    id: generateId(),
+    title: title,
+    note: '',
+    projectId: projectId,
+    column: targetColumn,
+    details: [],
+    expanded: false,
+    order: state.cards.filter(c => c.column === targetColumn).length,
+  });
+  saveState();
+
+  closeQuickAdd();
+
+  // Re-render
+  if (needsSwitch) {
+    document.querySelectorAll('.domain-btn').forEach(btn => {
+      btn.classList.toggle('active-domain', btn.dataset.domain === activeDomain);
+    });
+  }
+  if (currentView === 'week') renderWeek();
+  else if (currentView === 'today') showToday();
+  else if (currentView === 'punch') renderPunch();
+  else renderBoard();
 }
 
 // ── Settings ──
@@ -2788,6 +3022,7 @@ function showWeek() {
   document.getElementById('archive-view').classList.remove('active');
   weekView.classList.add('active');
   document.getElementById('archive-fab').hidden = false;
+  document.getElementById('quick-add-fab').hidden = false;
   setActiveTab('week');
 
   renderWeek();
@@ -2993,6 +3228,7 @@ function showToday(targetDate, targetCol) {
   document.getElementById('week-view').classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
   document.getElementById('archive-fab').hidden = false;
+  document.getElementById('quick-add-fab').hidden = false;
 
   // Parse the target date for display
   const viewDateObj = new Date(viewDate + 'T12:00:00');
@@ -3394,6 +3630,7 @@ function showPunch() {
   document.getElementById('archive-view').classList.remove('active');
   view.classList.add('active');
   document.getElementById('archive-fab').hidden = false;
+  document.getElementById('quick-add-fab').hidden = false;
   setActiveTab('punch');
   renderPunch();
 }
@@ -3887,8 +4124,9 @@ function showArchive(filter) {
   view.classList.add('active');
   setActiveTab('archive');
 
-  // Hide the FAB while in archive view
+  // Hide the FABs while in archive view
   document.getElementById('archive-fab').hidden = true;
+  document.getElementById('quick-add-fab').hidden = true;
 
   const now = new Date();
   const year = now.getFullYear();
