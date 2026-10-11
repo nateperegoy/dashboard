@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#4a7dac">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Work Dashboard</title>
+  <title>Dashboard</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png?v=3">
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=3">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
@@ -1984,7 +1984,7 @@ function applyDomainTheme() {
     btn.classList.toggle('active-domain', btn.dataset.domain === activeDomain);
   });
   // Update title
-  document.title = cfg.label + ' Dashboard';
+  document.title = 'Dashboard';
 }
 
 async function switchDomain(domain) {
@@ -2033,7 +2033,7 @@ function showCombinedToday() {
   document.querySelectorAll('.domain-btn').forEach(btn => {
     btn.classList.toggle('active-domain', btn.dataset.domain === 'combined');
   });
-  document.title = 'P+H Dashboard';
+  document.title = 'Dashboard';
   // Switch to today view with combined fetch
   setActiveTab('today');
   showToday();
@@ -2132,7 +2132,7 @@ function saveState() {
 
 // ── Ideas State ──
 const PUNCH_SECTIONS = [
-  { id: 'work', label: 'Work Dashboard' },
+  { id: 'work', label: 'Dashboard' },
   { id: 'personal', label: 'Personal / Home Dashboard' },
 ];
 let punchState;
