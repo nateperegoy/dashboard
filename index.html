@@ -2830,7 +2830,7 @@ function submitAdd(el, columnId) {
 // ── Quick Add ──
 function openQuickAdd() {
   const panel = document.getElementById('quick-add-panel');
-  const domainKeys = Object.keys(DOMAINS);
+  const domainKeys = ['personal', 'home', 'work'];
   const currentDomain = activeDomain;
 
   panel.innerHTML = `
