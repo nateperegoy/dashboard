@@ -2186,6 +2186,18 @@ const COMBINED_THEME = {
   label: 'P+H'
 };
 
+const MONTH_ABBRS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function computeLaterMonths() {
+  const now = new Date();
+  const cur = now.getMonth(); // 0-based
+  const months = [];
+  for (let i = 1; i <= 3; i++) {
+    const m = (cur + i) % 12;
+    months.push({ id: 'lt-' + MONTH_ABBRS[m].toLowerCase(), label: MONTH_ABBRS[m] });
+  }
+  return months;
+}
+
 const DOMAINS = {
   work: {
     label: 'Work',
@@ -2211,11 +2223,7 @@ const DOMAINS = {
       { id: 'nw-thu', label: 'Thu' },
       { id: 'nw-fri', label: 'Fri' },
     ],
-    laterMonths: [
-      { id: 'lt-nov', label: 'Nov' },
-      { id: 'lt-dec', label: 'Dec' },
-      { id: 'lt-jan', label: 'Jan' },
-    ],
+    get laterMonths() { return computeLaterMonths(); },
     columns: [
       { id: 'this-week', label: 'Week', hasDays: true },
       { id: 'next-week', label: 'Next Week', hasNextWeekDays: true },
@@ -2254,11 +2262,7 @@ const DOMAINS = {
       { id: 'nw-sat', label: 'Sat' },
       { id: 'nw-sun', label: 'Sun' },
     ],
-    laterMonths: [
-      { id: 'lt-nov', label: 'Nov' },
-      { id: 'lt-dec', label: 'Dec' },
-      { id: 'lt-jan', label: 'Jan' },
-    ],
+    get laterMonths() { return computeLaterMonths(); },
     columns: [
       { id: 'this-week', label: 'Week', hasDays: true },
       { id: 'next-week', label: 'Next Week', hasNextWeekDays: true },
@@ -2297,11 +2301,7 @@ const DOMAINS = {
       { id: 'nw-sat', label: 'Sat' },
       { id: 'nw-sun', label: 'Sun' },
     ],
-    laterMonths: [
-      { id: 'lt-nov', label: 'Nov' },
-      { id: 'lt-dec', label: 'Dec' },
-      { id: 'lt-jan', label: 'Jan' },
-    ],
+    get laterMonths() { return computeLaterMonths(); },
     columns: [
       { id: 'this-week', label: 'Week', hasDays: true },
       { id: 'next-week', label: 'Next Week', hasNextWeekDays: true },
@@ -4666,6 +4666,31 @@ function migrateState() {
   // Always update the stored Monday
   if (state.lastMonday !== currentMonISO) {
     state.lastMonday = currentMonISO;
+    changed = true;
+  }
+
+  // ── Month rollover: promote this-month → this-week, matching later-month → this-month ──
+  const currentMonthKey = 'lt-' + MONTH_ABBRS[now.getMonth()].toLowerCase(); // e.g. 'lt-oct'
+  const lastMonth = state.lastMonth || null;
+  if (lastMonth && lastMonth !== currentMonthKey) {
+    // Month changed — move "this-month" cards to "this-week"
+    state.cards.forEach(c => {
+      if (c.column === 'this-month') {
+        c.column = 'this-week';
+        changed = true;
+      }
+    });
+    // Move cards from the now-current month's later bucket to "this-month"
+    state.cards.forEach(c => {
+      if (c.column === currentMonthKey) {
+        c.column = 'this-month';
+        changed = true;
+      }
+    });
+  }
+  // Always update the stored month
+  if (state.lastMonth !== currentMonthKey) {
+    state.lastMonth = currentMonthKey;
     changed = true;
   }
 
