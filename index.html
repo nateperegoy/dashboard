@@ -837,6 +837,88 @@ body {
   display: flex;
 }
 
+/* Routines (weekly chores in week view) */
+.week-routines-row {
+  border-top: 1px solid var(--border-light);
+  padding: 8px 0 4px;
+  display: flex;
+  gap: 0;
+}
+.week-routines-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 4px 12px 2px;
+  opacity: 0.7;
+}
+.routine-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+.routine-item.checked {
+  text-decoration: line-through;
+  opacity: 0.45;
+}
+.routine-check {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s;
+}
+.routine-check:hover {
+  border-color: var(--accent);
+}
+.routine-check.done {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.routine-check.done::after {
+  content: '✓';
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+.routine-add-btn {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 8px;
+  opacity: 0.5;
+  font-family: inherit;
+}
+.routine-add-btn:hover { opacity: 1; color: var(--accent); }
+.routine-remove {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-family: inherit;
+  line-height: 1;
+}
+.routine-item:hover .routine-remove { opacity: 0.6; }
+.routine-remove:hover { opacity: 1; color: var(--accent); }
+
 /* Today view */
 .today-view {
   display: none;
@@ -3250,25 +3332,45 @@ function renderWeek() {
       </div>
     </div>
     <div class="week-days-row">
-      ${THIS_WEEK_DAYS.map(day => {
-        const cards = state.cards.filter(c => c.column === day.id).sort((a,b) => (a.order||0) - (b.order||0));
-        const _isToday = dayDates[day.id + '-iso'] === new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
-        return `
-          <div class="week-column${_isToday ? ' week-day-today' : ''}" data-week-col="${day.id}">
-            <div class="week-column-header">
-              <div class="week-day-link" onclick="showTodayForDate('${dayDates[day.id + '-iso']}', '${day.id}')" title="View this day">
-                <span class="column-title">${day.label}</span>
-                ${dayDates[day.id] ? `<span class="column-date">${dayDates[day.id]}</span>` : ''}
+      ${(() => {
+        const routines = getRoutines();
+        const checks = getRoutineChecks();
+        return THIS_WEEK_DAYS.map(day => {
+          const cards = state.cards.filter(c => c.column === day.id).sort((a,b) => (a.order||0) - (b.order||0));
+          const _isToday = dayDates[day.id + '-iso'] === new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+          const dayRoutines = routines.filter(r => r.day === day.label);
+          const routineHtml = dayRoutines.length > 0 || activeDomain === 'home' ? `
+            <div class="week-routines-row" style="flex-direction:column;border-top:1px solid var(--border-light);margin-top:8px;padding-top:6px;">
+              <div class="week-routines-label">Routines</div>
+              ${dayRoutines.map(r => {
+                const isChecked = checks[r.id + ':' + day.id];
+                return `<div class="routine-item${isChecked ? ' checked' : ''}">
+                  <button class="routine-check${isChecked ? ' done' : ''}" onclick="toggleRoutineCheck('${r.id}','${day.id}')" title="Toggle"></button>
+                  <span>${esc(r.name)}</span>
+                  <button class="routine-remove" onclick="removeRoutine('${r.id}')" title="Remove">×</button>
+                </div>`;
+              }).join('')}
+              <button class="routine-add-btn" onclick="addRoutine('${day.label}')">+ routine</button>
+            </div>
+          ` : '';
+          return `
+            <div class="week-column${_isToday ? ' week-day-today' : ''}" data-week-col="${day.id}">
+              <div class="week-column-header">
+                <div class="week-day-link" onclick="showTodayForDate('${dayDates[day.id + '-iso']}', '${day.id}')" title="View this day">
+                  <span class="column-title">${day.label}</span>
+                  ${dayDates[day.id] ? `<span class="column-date">${dayDates[day.id]}</span>` : ''}
+                </div>
+                ${cards.length > 0 ? `<span class="column-count">${cards.length}</span>` : ''}
               </div>
-              ${cards.length > 0 ? `<span class="column-count">${cards.length}</span>` : ''}
+              <div class="card-list" data-column="${day.id}">
+                ${cards.map(c => renderCard(c)).join('')}
+              </div>
+              <button class="add-card-btn" onclick="showAddForm(this, '${day.id}')">+ Add</button>
+              ${routineHtml}
             </div>
-            <div class="card-list" data-column="${day.id}">
-              ${cards.map(c => renderCard(c)).join('')}
-            </div>
-            <button class="add-card-btn" onclick="showAddForm(this, '${day.id}')">+ Add</button>
-          </div>
-        `;
-      }).join('')}
+          `;
+        }).join('');
+      })()}
     </div>
     <div class="week-nw-toggle${nwExpanded ? ' expanded' : ''}" onclick="toggleNextWeek()">
       <span class="toggle-arrow">▶</span>
@@ -3772,6 +3874,70 @@ function closeDurationPicker() {
   _pendingDrop = null;
 }
 
+// ── Weekly Routines (chores) ──
+function getRoutinesKey() { return 'dashboard-routines-' + activeDomain; }
+function getRoutineChecksKey() { return 'dashboard-routine-checks-' + activeDomain; }
+
+function getRoutines() {
+  try { return JSON.parse(localStorage.getItem(getRoutinesKey())) || []; } catch(e) { return []; }
+}
+function saveRoutines(routines) {
+  try { localStorage.setItem(getRoutinesKey(), JSON.stringify(routines)); } catch(e) {}
+}
+
+function getCurrentWeekMonday() {
+  const now = new Date();
+  const d = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (d === 0 ? 6 : d - 1));
+  return mon.toLocaleDateString('en-CA');
+}
+
+function getRoutineChecks() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(getRoutineChecksKey())) || {};
+    const weekKey = getCurrentWeekMonday();
+    // Auto-reset: only return checks for current week
+    if (stored._week !== weekKey) return {};
+    return stored;
+  } catch(e) { return {}; }
+}
+
+function saveRoutineChecks(checks) {
+  try {
+    checks._week = getCurrentWeekMonday();
+    localStorage.setItem(getRoutineChecksKey(), JSON.stringify(checks));
+  } catch(e) {}
+}
+
+function toggleRoutineCheck(routineId, dayId) {
+  const checks = getRoutineChecks();
+  const key = routineId + ':' + dayId;
+  if (checks[key]) delete checks[key];
+  else checks[key] = true;
+  saveRoutineChecks(checks);
+  renderWeek();
+}
+
+function addRoutine(dayLabel) {
+  const name = prompt('Routine name:');
+  if (!name || !name.trim()) return;
+  const routines = getRoutines();
+  routines.push({ id: Date.now().toString(36), name: name.trim(), day: dayLabel });
+  saveRoutines(routines);
+  renderWeek();
+}
+
+function removeRoutine(routineId) {
+  const routines = getRoutines().filter(r => r.id !== routineId);
+  saveRoutines(routines);
+  // Also clean up checks
+  const checks = getRoutineChecks();
+  Object.keys(checks).forEach(k => { if (k.startsWith(routineId + ':')) delete checks[k]; });
+  saveRoutineChecks(checks);
+  renderWeek();
+}
+
 function setupTaskDragToCalendar(view) {
   // Enable HTML5 drag on today-cards
   view.querySelectorAll('.today-card[draggable]').forEach(card => {
@@ -4268,6 +4434,43 @@ function migrateState() {
   state.cards.forEach(c => {
     if (c.column === 'later') { c.column = 'lt-nov'; changed = true; }
   });
+
+  // ── Week rollover: migrate next-week cards to this-week when Monday advances ──
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const currentMon = new Date(now);
+  currentMon.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  const currentMonISO = currentMon.toLocaleDateString('en-CA');
+
+  const lastMon = state.lastMonday || null;
+  if (lastMon && lastMon < currentMonISO) {
+    // Week has rolled — move nw-* cards to tw-* equivalents
+    const nwDays = getDomainConfig().nextWeekDays || [];
+    const twDays = getDomainConfig().weekDays || [];
+    const nwToTw = {};
+    nwDays.forEach(nw => {
+      const dayLabel = nw.label; // e.g. 'Tue'
+      const tw = twDays.find(d => d.label === dayLabel);
+      if (tw) nwToTw[nw.id] = tw.id;
+    });
+
+    state.cards.forEach(c => {
+      if (nwToTw[c.column]) {
+        c.column = nwToTw[c.column];
+        changed = true;
+      } else if (c.column === 'next-week') {
+        c.column = 'this-week';
+        changed = true;
+      }
+    });
+  }
+
+  // Always update the stored Monday
+  if (state.lastMonday !== currentMonISO) {
+    state.lastMonday = currentMonISO;
+    changed = true;
+  }
+
   if (changed) saveState();
 }
 
