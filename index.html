@@ -2013,6 +2013,22 @@ body {
 .todoist-task.priority-p2:hover { border-color: rgba(235, 137, 9, 0.35); }
 .todoist-task.priority-p3 { background: rgba(64, 115, 255, 0.08); border-color: rgba(64, 115, 255, 0.2); }
 .todoist-task.priority-p3:hover { border-color: rgba(64, 115, 255, 0.35); }
+/* Priority columns view */
+.todoist-view-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.todoist-view-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.todoist-view-toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.todoist-priority-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.todoist-priority-col { min-width: 0; }
+.todoist-priority-col-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 8px 6px; border-bottom: 2px solid var(--border-light); margin-bottom: 6px; }
+.todoist-priority-col-header.p1 { color: #d1453b; border-color: rgba(209, 69, 59, 0.4); }
+.todoist-priority-col-header.p2 { color: #eb8909; border-color: rgba(235, 137, 9, 0.4); }
+.todoist-priority-col-header.p3 { color: #4073ff; border-color: rgba(64, 115, 255, 0.4); }
+.todoist-priority-col-header.p4 { color: var(--text-muted); border-color: var(--border-light); }
+.todoist-priority-cols .todoist-task { margin-bottom: 6px; }
+.todoist-priority-col-count { font-weight: 400; opacity: 0.6; }
+@media (max-width: 600px) {
+  .todoist-priority-cols { grid-template-columns: repeat(2, 1fr); }
+}
 .todoist-empty {
   padding: 16px 0;
   font-size: 13px;
@@ -3663,6 +3679,7 @@ function showToday(targetDate, targetCol) {
           <div class="todoist-header">
             <div class="todoist-logo">✓</div>
             <span class="todoist-header-title">${combinedToday ? '#personal + #home' : '#' + getTodoistProject().toLowerCase()} · ${isToday ? 'today' : dayName.toLowerCase()}</span>
+            <button class="todoist-view-toggle" id="todoist-col-toggle" onclick="toggleTodoistColumns()" title="View as priority columns">▦</button>
             <a href="https://app.todoist.com/app/task/add" target="_blank" rel="noopener" class="todoist-add-btn">+ Add</a>
           </div>
           <div id="todoist-container"></div>
@@ -4495,6 +4512,12 @@ function renderTodoistSection() {
   const restTasks = sortedTasks.filter(t => !alwaysTopNames.some(n => (t.content || '').toLowerCase().includes(n)));
   sortedTasks = [...topTasks, ...restTasks];
 
+  // Priority columns view
+  if (todoistColumnsView) {
+    renderTodoistColumns(container, sortedTasks);
+    return;
+  }
+
   container.innerHTML = sortedTasks.map(t => {
     // Todoist REST API: due.date, priority is 1-4 (4=most urgent)
     const dueDate = t.due ? (t.due.date || '').slice(0, 10) : null;
@@ -4536,6 +4559,65 @@ function renderTodoistSection() {
 
   // Enable drag-to-calendar for Todoist tasks
   enableTodoistDragToCalendar();
+}
+
+// ── Todoist priority columns toggle ──
+let todoistColumnsView = false;
+
+function toggleTodoistColumns() {
+  todoistColumnsView = !todoistColumnsView;
+  const btn = document.getElementById('todoist-col-toggle');
+  if (btn) btn.classList.toggle('active', todoistColumnsView);
+  renderTodoistSection();
+}
+
+function renderTodoistColumns(container, tasks) {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+  // Todoist API: priority 4 = P1 (urgent), 3 = P2, 2 = P3, 1 = P4 (no priority)
+  const buckets = { p1: [], p2: [], p3: [], p4: [] };
+  tasks.forEach(t => {
+    const p = t.priority || 1;
+    if (p === 4) buckets.p1.push(t);
+    else if (p === 3) buckets.p2.push(t);
+    else if (p === 2) buckets.p3.push(t);
+    else buckets.p4.push(t);
+  });
+
+  const renderTask = (t) => {
+    const dueDate = t.due ? (t.due.date || '').slice(0, 10) : null;
+    const isOverdue = dueDate && dueDate < today;
+    const p = t.priority || 1;
+    const priorityClass = p === 4 ? 'p1' : p === 3 ? 'p2' : p === 2 ? 'p3' : '';
+    const labels = (t.labels || []).join(', ');
+    return `
+      <div class="todoist-task ${priorityClass ? 'priority-' + priorityClass : ''}" data-task-id="${t.id}">
+        <button class="todoist-check" onclick="completeTodoistTask('${t.id}')" aria-label="Complete task">✓</button>
+        <div class="todoist-task-body">
+          <div class="todoist-task-title">${esc(t.content)}</div>
+          <div class="todoist-task-meta">
+            ${isOverdue ? `<span class="todoist-task-overdue">Overdue</span>` : ''}
+            ${labels ? `<span class="todoist-task-label">${esc(labels)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const colHtml = (label, cls, tasks) => `
+    <div class="todoist-priority-col">
+      <div class="todoist-priority-col-header ${cls}">${label} <span class="todoist-priority-col-count">(${tasks.length})</span></div>
+      ${tasks.length > 0 ? tasks.map(renderTask).join('') : '<div style="font-size:11px;color:var(--text-muted);padding:8px;opacity:0.5">—</div>'}
+    </div>
+  `;
+
+  container.innerHTML = `
+    <div class="todoist-priority-cols">
+      ${colHtml('P1', 'p1', buckets.p1)}
+      ${colHtml('P2', 'p2', buckets.p2)}
+      ${colHtml('P3', 'p3', buckets.p3)}
+      ${colHtml('P4', 'p4', buckets.p4)}
+    </div>
+  `;
 }
 
 // ── Migrate old state ──
