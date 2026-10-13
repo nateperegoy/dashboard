@@ -1005,6 +1005,78 @@ body {
   color: var(--text-muted);
   text-align: center;
 }
+
+/* Duration picker popup */
+.duration-picker-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 300;
+  justify-content: center;
+  align-items: center;
+}
+.duration-picker-overlay.open { display: flex; }
+.duration-picker {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  min-width: 260px;
+  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  animation: quick-add-slide-up 0.15s ease;
+}
+.duration-picker h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.duration-picker-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+.duration-picker-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.duration-picker-btn {
+  flex: 1 1 auto;
+  min-width: 60px;
+  padding: 10px 6px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg, transparent);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: center;
+}
+.duration-picker-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.duration-picker-cancel {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+}
+.duration-picker-cancel:hover { color: var(--text); }
 .today-header {
   display: flex;
   align-items: center;
@@ -1497,6 +1569,63 @@ body {
   justify-content: flex-end;
 }
 
+/* Duration picker popup */
+.duration-picker-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 300;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+.duration-picker-overlay.open { display: flex; }
+.duration-picker-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  animation: quick-add-slide-up 0.2s ease;
+}
+.duration-picker-panel h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.duration-picker-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.duration-picker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.duration-chip {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card-bg, transparent);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.duration-chip:hover { border-color: var(--accent); color: var(--accent); }
+.duration-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 /* Archive view */
 .archive-view {
   display: none;
@@ -1913,6 +2042,14 @@ body {
 
 <div class="quick-add-overlay" id="quick-add-overlay" onclick="if(event.target===this)closeQuickAdd()">
   <div class="quick-add-panel" id="quick-add-panel"></div>
+</div>
+
+<div class="duration-picker-overlay" id="duration-picker-overlay" onclick="if(event.target===this)closeDurationPicker()">
+  <div class="duration-picker" id="duration-picker"></div>
+</div>
+
+<div class="duration-picker-overlay" id="duration-picker-overlay" onclick="if(event.target===this)closeDurationPicker()">
+  <div class="duration-picker-panel" id="duration-picker-panel"></div>
 </div>
 
 <div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
@@ -3413,33 +3550,35 @@ const CAL_SLOT_MIN = 30;
 function getTimeBlocksKey() { return getDomainConfig().timeBlocksKey; }
 let calendarEvents = [];
 
+function getViewDate() {
+  return todayViewDate || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+}
+
 function getTimeBlocks() {
   try {
     const stored = JSON.parse(localStorage.getItem(getTimeBlocksKey()));
     if (!stored) return [];
-    // Only return today's blocks
-    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
-    return (stored[todayStr] || []);
+    return (stored[getViewDate()] || []);
   } catch(e) { return []; }
 }
 
 function saveTimeBlocks(blocks) {
   try {
-    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+    const dateStr = getViewDate();
     const stored = JSON.parse(localStorage.getItem(getTimeBlocksKey()) || '{}');
-    stored[todayStr] = blocks;
-    // Clean up old days (keep last 7)
+    stored[dateStr] = blocks;
+    // Clean up old days (keep last 14)
     const keys = Object.keys(stored).sort();
-    while (keys.length > 7) { delete stored[keys.shift()]; }
+    while (keys.length > 14) { delete stored[keys.shift()]; }
     localStorage.setItem(getTimeBlocksKey(), JSON.stringify(stored));
   } catch(e) {}
 }
 
-function addTimeBlock(slotTime, title, color, sourceType, sourceId) {
+function addTimeBlock(slotTime, title, color, sourceType, sourceId, duration) {
   const blocks = getTimeBlocks();
   // Remove existing block for this source to avoid duplicates
   const filtered = blocks.filter(b => !(b.sourceType === sourceType && b.sourceId === sourceId));
-  filtered.push({ slotTime, title, color, sourceType, sourceId, duration: 30 });
+  filtered.push({ slotTime, title, color, sourceType, sourceId, duration: duration || 30 });
   saveTimeBlocks(filtered);
   renderCalendarSlots();
 }
@@ -3586,10 +3725,51 @@ function setupCalendarDropTargets(body) {
       try {
         const data = JSON.parse(e.dataTransfer.getData('text/plain'));
         const slotTime = slot.dataset.slotTime;
-        addTimeBlock(slotTime, data.title, data.color || '', data.type, data.id);
+        showDurationPicker(slotTime, data);
       } catch(err) {}
     });
   });
+}
+
+let _pendingDrop = null;
+
+function showDurationPicker(slotTime, data) {
+  _pendingDrop = { slotTime, data };
+  const picker = document.getElementById('duration-picker');
+  const overlay = document.getElementById('duration-picker-overlay');
+  const timeDisplay = formatTime12(slotTime);
+  const durations = [
+    { label: '15m', mins: 15 },
+    { label: '30m', mins: 30 },
+    { label: '45m', mins: 45 },
+    { label: '1 hr', mins: 60 },
+    { label: '90m', mins: 90 },
+  ];
+
+  picker.innerHTML = `
+    <h4>${esc(data.title)}</h4>
+    <p class="duration-picker-subtitle">Drop at ${timeDisplay} — how long?</p>
+    <div class="duration-picker-options">
+      ${durations.map(d => `
+        <button class="duration-picker-btn" onclick="selectDuration(${d.mins})">${d.label}</button>
+      `).join('')}
+    </div>
+    <button class="duration-picker-cancel" onclick="closeDurationPicker()">Cancel</button>
+  `;
+
+  overlay.classList.add('open');
+}
+
+function selectDuration(minutes) {
+  const { slotTime, data } = _pendingDrop;
+  _pendingDrop = null;
+  closeDurationPicker();
+  addTimeBlock(slotTime, data.title, data.color, data.type, data.id, minutes);
+}
+
+function closeDurationPicker() {
+  document.getElementById('duration-picker-overlay').classList.remove('open');
+  _pendingDrop = null;
 }
 
 function setupTaskDragToCalendar(view) {
