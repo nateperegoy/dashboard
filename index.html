@@ -4484,29 +4484,29 @@ function renderTodoistSection() {
   const customOrder = getTodoistOrder();
   const alwaysTopNames = getDomainConfig().alwaysTopNames;
   const pinnedNames = getDomainConfig().pinnedNames;
+  // Always sort by priority first; within same priority, respect custom drag order
   let sortedTasks;
+  const orderMap = {};
   if (customOrder.length > 0) {
-    const orderMap = {};
     customOrder.forEach((id, i) => orderMap[id] = i);
-    const known = todoistTasks.filter(t => t.id in orderMap);
-    const unknown = todoistTasks.filter(t => !(t.id in orderMap));
-    known.sort((a, b) => orderMap[a.id] - orderMap[b.id]);
-    unknown.sort((a, b) => (b.priority || 1) - (a.priority || 1));
-    sortedTasks = [...known, ...unknown];
-  } else {
-    sortedTasks = [...todoistTasks].sort((a, b) => {
-      const aEl = document.querySelector(`.todoist-task[data-task-id="${a.id}"]`);
-      const bEl = document.querySelector(`.todoist-task[data-task-id="${b.id}"]`);
-      const aCompleted = aEl ? aEl.classList.contains('completed') : false;
-      const bCompleted = bEl ? bEl.classList.contains('completed') : false;
-      const aName = (a.content || '').toLowerCase();
-      const bName = (b.content || '').toLowerCase();
-      const aPinned = !aCompleted && pinnedNames.some(n => aName.includes(n));
-      const bPinned = !bCompleted && pinnedNames.some(n => bName.includes(n));
-      if (aPinned !== bPinned) return aPinned ? -1 : 1;
-      return (b.priority || 1) - (a.priority || 1);
-    });
   }
+  sortedTasks = [...todoistTasks].sort((a, b) => {
+    const aName = (a.content || '').toLowerCase();
+    const bName = (b.content || '').toLowerCase();
+    const aPinned = pinnedNames.some(n => aName.includes(n));
+    const bPinned = pinnedNames.some(n => bName.includes(n));
+    if (aPinned !== bPinned) return aPinned ? -1 : 1;
+    // Primary: priority (higher number = higher priority in Todoist API)
+    const pDiff = (b.priority || 1) - (a.priority || 1);
+    if (pDiff !== 0) return pDiff;
+    // Secondary: custom drag order within same priority
+    if (customOrder.length > 0) {
+      const aIdx = a.id in orderMap ? orderMap[a.id] : 9999;
+      const bIdx = b.id in orderMap ? orderMap[b.id] : 9999;
+      return aIdx - bIdx;
+    }
+    return 0;
+  });
   // Always force "WORK STARTUP" to the top, even after drag reorder
   const topTasks = sortedTasks.filter(t => alwaysTopNames.some(n => (t.content || '').toLowerCase().includes(n)));
   const restTasks = sortedTasks.filter(t => !alwaysTopNames.some(n => (t.content || '').toLowerCase().includes(n)));
