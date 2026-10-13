@@ -918,6 +918,7 @@ body {
 }
 .routine-item:hover .routine-remove { opacity: 0.6; }
 .routine-remove:hover { opacity: 1; color: var(--accent); }
+.routine-drop-target { background: var(--accent-light); border-radius: 6px; outline: 2px dashed var(--accent); outline-offset: -2px; }
 
 /* Today view */
 .today-view {
@@ -3333,20 +3334,20 @@ function renderWeek() {
     </div>
     <div class="week-days-row">
       ${(() => {
-        const routines = getRoutines();
         const checks = getRoutineChecks();
         return THIS_WEEK_DAYS.map(day => {
           const cards = state.cards.filter(c => c.column === day.id).sort((a,b) => (a.order||0) - (b.order||0));
           const _isToday = dayDates[day.id + '-iso'] === new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
-          const dayRoutines = routines.filter(r => r.day === day.label);
+          const dayRoutines = getRoutinesForDay(day.label);
           const routineHtml = dayRoutines.length > 0 || activeDomain === 'home' ? `
-            <div class="week-routines-row" style="flex-direction:column;border-top:1px solid var(--border-light);margin-top:8px;padding-top:6px;">
+            <div class="week-routines-row" style="flex-direction:column;border-top:1px solid var(--border-light);margin-top:8px;padding-top:6px;" data-routine-day="${day.label}">
               <div class="week-routines-label">Routines</div>
               ${dayRoutines.map(r => {
                 const isChecked = checks[r.id + ':' + day.id];
-                return `<div class="routine-item${isChecked ? ' checked' : ''}">
+                const movedLabel = r.defaultDay !== day.label ? ` <span style="font-size:10px;opacity:0.5">(${r.defaultDay})</span>` : '';
+                return `<div class="routine-item${isChecked ? ' checked' : ''}" draggable="true" data-routine-id="${r.id}" data-routine-day="${day.label}">
                   <button class="routine-check${isChecked ? ' done' : ''}" onclick="toggleRoutineCheck('${r.id}','${day.id}')" title="Toggle"></button>
-                  <span>${esc(r.name)}</span>
+                  <span>${esc(r.name)}${movedLabel}</span>
                   <button class="routine-remove" onclick="removeRoutine('${r.id}')" title="Remove">×</button>
                 </div>`;
               }).join('')}
@@ -3354,7 +3355,7 @@ function renderWeek() {
             </div>
           ` : '';
           return `
-            <div class="week-column${_isToday ? ' week-day-today' : ''}" data-week-col="${day.id}">
+            <div class="week-column${_isToday ? ' week-day-today' : ''}" data-week-col="${day.id}" data-day-label="${day.label}">
               <div class="week-column-header">
                 <div class="week-day-link" onclick="showTodayForDate('${dayDates[day.id + '-iso']}', '${day.id}')" title="View this day">
                   <span class="column-title">${day.label}</span>
@@ -3432,6 +3433,68 @@ function renderWeek() {
           saveState();
         }
       }
+    });
+  });
+
+  // ── Routine drag-and-drop between day columns ──
+  weekView.querySelectorAll('.routine-item[draggable="true"]').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      e.stopPropagation();
+      e.dataTransfer.setData('application/routine-id', item.dataset.routineId);
+      e.dataTransfer.effectAllowed = 'move';
+      item.style.opacity = '0.4';
+    });
+    item.addEventListener('dragend', () => {
+      item.style.opacity = '';
+      weekView.querySelectorAll('.week-routines-row').forEach(r => r.classList.remove('routine-drop-target'));
+    });
+  });
+
+  weekView.querySelectorAll('.week-routines-row[data-routine-day]').forEach(zone => {
+    zone.addEventListener('dragover', e => {
+      if (e.dataTransfer.types.includes('application/routine-id')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        zone.classList.add('routine-drop-target');
+      }
+    });
+    zone.addEventListener('dragleave', () => {
+      zone.classList.remove('routine-drop-target');
+    });
+    zone.addEventListener('drop', e => {
+      const routineId = e.dataTransfer.getData('application/routine-id');
+      if (!routineId) return;
+      e.preventDefault();
+      zone.classList.remove('routine-drop-target');
+      const targetDay = zone.dataset.routineDay;
+      moveRoutineToDay(routineId, targetDay);
+    });
+  });
+
+  // Also allow dropping on the week-column itself (for days with no routines section yet)
+  weekView.querySelectorAll('.week-column[data-day-label]').forEach(col => {
+    col.addEventListener('dragover', e => {
+      if (e.dataTransfer.types.includes('application/routine-id')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rZone = col.querySelector('.week-routines-row');
+        if (rZone) rZone.classList.add('routine-drop-target');
+      }
+    });
+    col.addEventListener('dragleave', e => {
+      if (!col.contains(e.relatedTarget)) {
+        const rZone = col.querySelector('.week-routines-row');
+        if (rZone) rZone.classList.remove('routine-drop-target');
+      }
+    });
+    col.addEventListener('drop', e => {
+      const routineId = e.dataTransfer.getData('application/routine-id');
+      if (!routineId) return;
+      e.preventDefault();
+      const rZone = col.querySelector('.week-routines-row');
+      if (rZone) rZone.classList.remove('routine-drop-target');
+      const targetDay = col.dataset.dayLabel;
+      moveRoutineToDay(routineId, targetDay);
     });
   });
 }
@@ -3514,6 +3577,8 @@ function showToday(targetDate, targetCol) {
   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const dayName = dayNames[viewDateObj.getDay()];
+  const shortDayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const shortDay = shortDayNames[viewDateObj.getDay()];
   const dateStr = months[viewDateObj.getMonth()] + ' ' + viewDateObj.getDate() + ', ' + viewDateObj.getFullYear();
 
   // Show day-specific cards from the week view (not Big Rocks) — skip in combined mode
@@ -3569,6 +3634,28 @@ function showToday(targetDate, targetCol) {
         <div class="today-empty-text">Nothing on the board today</div>
       </div>
     `;
+  }
+
+  // Routines for this day (shown as P1-style tasks)
+  const todayRoutines = getRoutinesForDay(shortDay);
+  const rChecks = getRoutineChecks();
+  if (todayRoutines.length > 0) {
+    html += `<div class="today-section-label" style="margin-top:18px"><span style="color:#d1453b;margin-right:4px">⟳</span> Routines</div>`;
+    html += todayRoutines.map(r => {
+      const isChecked = rChecks[r.id + ':' + (todayCol || shortDay)];
+      return `
+        <div class="todoist-task priority-p1${isChecked ? ' completed' : ''}" data-routine-id="${r.id}">
+          <button class="todoist-check${isChecked ? '' : ''}" style="border-color: #d1453b;${isChecked ? 'background:#d1453b;border-color:#d1453b;color:#fff;pointer-events:none' : ''}" onclick="toggleRoutineCheck('${r.id}','${todayCol || shortDay}')">✓</button>
+          <div class="todoist-task-body">
+            <div class="todoist-task-title">${esc(r.name)}</div>
+            <div class="todoist-task-meta">
+              <span class="todoist-task-priority p1">P1</span>
+              <span class="todoist-task-label">${r.defaultDay === shortDay ? r.day : r.day + ' → ' + shortDay}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   html += `
@@ -3924,6 +4011,29 @@ function addRoutine(dayLabel) {
   if (!name || !name.trim()) return;
   const routines = getRoutines();
   routines.push({ id: Date.now().toString(36), name: name.trim(), day: dayLabel });
+  saveRoutines(routines);
+  renderWeek();
+}
+
+function getRoutinesForDay(shortDayLabel) {
+  const routines = getRoutines();
+  const weekKey = getCurrentWeekMonday();
+  return routines.filter(r => {
+    const effectiveDay = (r.overrideWeek === weekKey && r.overrideDay) ? r.overrideDay : r.day;
+    return effectiveDay === shortDayLabel;
+  }).map(r => ({
+    ...r,
+    defaultDay: r.day,
+    day: (r.overrideWeek === getCurrentWeekMonday() && r.overrideDay) ? r.overrideDay : r.day,
+  }));
+}
+
+function moveRoutineToDay(routineId, newDay) {
+  const routines = getRoutines();
+  const r = routines.find(x => x.id === routineId);
+  if (!r) return;
+  r.overrideWeek = getCurrentWeekMonday();
+  r.overrideDay = newDay;
   saveRoutines(routines);
   renderWeek();
 }
