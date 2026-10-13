@@ -1370,12 +1370,19 @@ body {
 .punch-clear-done:hover { color: var(--accent); }
 
 /* Archive floating button */
-.archive-fab {
+/* FAB stack — bottom to top: add, archive, print */
+.fab-stack {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 72px;
-  height: 72px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 12px;
+  z-index: 100;
+}
+.fab-btn {
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--column-header-bg);
   border: 1px solid var(--border);
@@ -1385,11 +1392,12 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 22px;
-  z-index: 100;
   transition: background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-.archive-fab:hover { color: var(--accent); background: var(--card-bg); transform: scale(1.08); }
+.fab-btn:hover { color: var(--accent); background: var(--card-bg); transform: scale(1.08); }
+.fab-btn svg { width: 24px; height: 24px; }
+.quick-add-fab { font-size: 28px; font-weight: 300; }
 .archive-fab.drag-over {
   background: var(--accent);
   color: #fff;
@@ -1404,29 +1412,6 @@ body {
   0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
   50% { transform: scale(1.1); box-shadow: 0 4px 16px rgba(74,125,172,0.3); }
 }
-
-/* Quick-add floating button */
-.quick-add-fab {
-  position: fixed;
-  bottom: 24px;
-  right: 108px;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--column-header-bg);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  font-weight: 300;
-  z-index: 100;
-  transition: background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-.quick-add-fab:hover { color: var(--accent); background: var(--card-bg); transform: scale(1.08); }
 
 /* Quick-add modal */
 .quick-add-overlay {
@@ -1844,24 +1829,41 @@ body {
   .app-header .btn { min-width: 38px; padding: 4px 6px; font-size: 8px; border-radius: 8px; }
   .app-header .btn svg { width: 18px; height: 18px; }
   .app-header .btn.settings-btn svg { width: 18px; height: 18px; }
-  .archive-fab, .quick-add-fab { width: 48px; height: 48px; bottom: 72px; }
-  .archive-fab { right: 14px; }
-  .quick-add-fab { right: 72px; font-size: 24px; }
-  .archive-fab svg { width: 22px; height: 22px; }
+  .fab-stack { bottom: 72px; right: 14px; gap: 8px; }
+  .fab-btn { width: 44px; height: 44px; }
+  .fab-btn svg { width: 20px; height: 20px; }
+  .quick-add-fab { font-size: 22px; }
 }
 @media (max-width: 400px) {
   .domain-btn { min-width: 34px; padding: 3px 5px; }
   .domain-btn .domain-letter { font-size: 13px; line-height: 16px; height: 16px; }
   .app-header .btn { min-width: 32px; padding: 3px 5px; font-size: 7px; }
   .app-header .btn svg { width: 16px; height: 16px; }
-  .archive-fab, .quick-add-fab { width: 44px; height: 44px; bottom: 68px; }
-  .archive-fab { right: 12px; }
-  .quick-add-fab { right: 62px; font-size: 22px; }
-  .archive-fab svg { width: 20px; height: 20px; }
+  .fab-stack { bottom: 68px; right: 12px; gap: 6px; }
+  .fab-btn { width: 40px; height: 40px; }
+  .fab-btn svg { width: 18px; height: 18px; }
+  .quick-add-fab { font-size: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+@media print {
+  @page { size: landscape; margin: 0.4in; }
+  body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .app-header, .fab-stack, .quick-add-overlay, .settings-overlay, .today-calendar-col,
+  .todoist-section, .todoist-footer, .todoist-add-btn, .add-btn, .today-nav,
+  .header-secondary, .board-header { display: none !important; }
+  .board, .week-view, .today-view, .punch-view, .archive-view {
+    display: block !important; position: static !important; overflow: visible !important;
+    max-width: none !important; width: 100% !important; padding: 0 !important; margin: 0 !important;
+  }
+  .board { display: flex !important; gap: 12px; }
+  .column { break-inside: avoid; page-break-inside: avoid; }
+  .card, .today-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none !important; border: 1px solid #ccc; }
+  .card::before, .today-card::before { opacity: 0.3 !important; }
+  .print-title { display: block !important; font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #23303f; }
+}
+.print-title { display: none; }
   </style>
 </head>
 <body>
@@ -1899,15 +1901,19 @@ body {
 
 <div class="archive-view" id="archive-view"></div>
 
-<button class="quick-add-fab" id="quick-add-fab" onclick="openQuickAdd()" title="Quick Add">+</button>
+<div class="fab-stack" id="fab-stack">
+  <button class="fab-btn quick-add-fab" id="quick-add-fab" onclick="openQuickAdd()" title="Quick Add">+</button>
+  <button class="fab-btn archive-fab" id="archive-fab" onclick="showArchive()" title="Archive">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+  </button>
+  <button class="fab-btn print-fab" id="print-fab" onclick="printView()" title="Print to PDF">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+  </button>
+</div>
 
 <div class="quick-add-overlay" id="quick-add-overlay" onclick="if(event.target===this)closeQuickAdd()">
   <div class="quick-add-panel" id="quick-add-panel"></div>
 </div>
-
-<button class="archive-fab" id="archive-fab" onclick="showArchive()" title="Archive">
-  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
-</button>
 
 <div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
   <div class="settings-panel">
@@ -2399,8 +2405,7 @@ function showHorizons() {
   document.getElementById('today-view').classList.remove('active');
   document.getElementById('punch-view').classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
-  document.getElementById('archive-fab').hidden = false;
-  document.getElementById('quick-add-fab').hidden = false;
+  document.getElementById('fab-stack').hidden = false;
   setActiveTab('horizons');
   renderBoard();
 }
@@ -2734,10 +2739,8 @@ function showAddForm(btn, columnId) {
   document.querySelectorAll('.add-card-btn').forEach(b => b.hidden = false);
 
   // Hide FABs so they don't overlap the form
-  const archiveFab = document.getElementById('archive-fab');
-  if (archiveFab) archiveFab.style.display = 'none';
-  const quickAddFab = document.getElementById('quick-add-fab');
-  if (quickAddFab) quickAddFab.style.display = 'none';
+  const fabStack = document.getElementById('fab-stack');
+  if (fabStack) fabStack.style.display = 'none';
 
   btn.hidden = true;
   const form = document.createElement('div');
@@ -2781,10 +2784,8 @@ function cancelAdd(el) {
   form.remove();
   if (btn) btn.hidden = false;
   // Restore FABs
-  const archiveFab = document.getElementById('archive-fab');
-  if (archiveFab) archiveFab.style.display = '';
-  const quickAddFab = document.getElementById('quick-add-fab');
-  if (quickAddFab) quickAddFab.style.display = '';
+  const fabStack2 = document.getElementById('fab-stack');
+  if (fabStack2) fabStack2.style.display = '';
 }
 
 let _addingCard = false;
@@ -2808,10 +2809,8 @@ function submitAdd(el, columnId) {
   form.remove();
   if (addBtn) addBtn.hidden = false;
   // Restore FABs
-  const archiveFab = document.getElementById('archive-fab');
-  if (archiveFab) archiveFab.style.display = '';
-  const quickAddFab = document.getElementById('quick-add-fab');
-  if (quickAddFab) quickAddFab.style.display = '';
+  const fabStack3 = document.getElementById('fab-stack');
+  if (fabStack3) fabStack3.style.display = '';
 
   state.cards.push({
     id: generateId(),
@@ -2891,6 +2890,38 @@ function selectQuickAddColumn(el) {
 
 function closeQuickAdd() {
   document.getElementById('quick-add-overlay').classList.remove('open');
+}
+
+// ── Print ──
+function printView() {
+  // Add a title showing current view + domain + date
+  let title = 'Dashboard';
+  const domainLabel = DOMAINS[activeDomain]?.label || activeDomain;
+  if (currentView === 'today') {
+    const dateEl = document.querySelector('.today-day-name');
+    const dateLabel = document.querySelector('.today-date-label');
+    title = (dateEl?.textContent || 'Today') + (dateLabel ? ' — ' + dateLabel.textContent : '');
+  } else if (currentView === 'week') {
+    title = domainLabel + ' — Week View';
+  } else if (currentView === 'punch') {
+    title = domainLabel + ' — Ideas';
+  } else if (currentView === 'archive') {
+    title = 'Archive';
+  } else {
+    title = domainLabel + ' — Board';
+  }
+
+  // Insert a print-only title
+  let printTitle = document.getElementById('print-title');
+  if (!printTitle) {
+    printTitle = document.createElement('div');
+    printTitle.id = 'print-title';
+    printTitle.className = 'print-title';
+    document.body.insertBefore(printTitle, document.body.firstChild);
+  }
+  printTitle.textContent = title;
+
+  window.print();
 }
 
 function submitQuickAdd() {
@@ -3032,8 +3063,7 @@ function showWeek() {
   punchView.classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
   weekView.classList.add('active');
-  document.getElementById('archive-fab').hidden = false;
-  document.getElementById('quick-add-fab').hidden = false;
+  document.getElementById('fab-stack').hidden = false;
   setActiveTab('week');
 
   renderWeek();
@@ -3238,8 +3268,7 @@ function showToday(targetDate, targetCol) {
   punch.classList.remove('active');
   document.getElementById('week-view').classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
-  document.getElementById('archive-fab').hidden = false;
-  document.getElementById('quick-add-fab').hidden = false;
+  document.getElementById('fab-stack').hidden = false;
 
   // Parse the target date for display
   const viewDateObj = new Date(viewDate + 'T12:00:00');
@@ -3647,8 +3676,7 @@ function showPunch() {
   today.classList.remove('active');
   document.getElementById('archive-view').classList.remove('active');
   view.classList.add('active');
-  document.getElementById('archive-fab').hidden = false;
-  document.getElementById('quick-add-fab').hidden = false;
+  document.getElementById('fab-stack').hidden = false;
   setActiveTab('punch');
   renderPunch();
 }
@@ -4143,8 +4171,7 @@ function showArchive(filter) {
   setActiveTab('archive');
 
   // Hide the FABs while in archive view
-  document.getElementById('archive-fab').hidden = true;
-  document.getElementById('quick-add-fab').hidden = true;
+  document.getElementById('fab-stack').hidden = true;
 
   const now = new Date();
   const year = now.getFullYear();
