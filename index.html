@@ -3336,7 +3336,7 @@ function showToday(targetDate, targetCol) {
         <div class="todoist-section">
           <div class="todoist-header">
             <div class="todoist-logo">✓</div>
-            <span class="todoist-header-title">${combinedToday ? '#personal + #home · today' : '#' + getTodoistProject().toLowerCase() + ' · today'}</span>
+            <span class="todoist-header-title">${combinedToday ? '#personal + #home' : '#' + getTodoistProject().toLowerCase()} · ${isToday ? 'today' : dayName.toLowerCase()}</span>
             <a href="https://app.todoist.com/app/task/add" target="_blank" rel="noopener" class="todoist-add-btn">+ Add</a>
           </div>
           <div id="todoist-container"></div>
