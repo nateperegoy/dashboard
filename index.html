@@ -3679,8 +3679,8 @@ function showToday(targetDate, targetCol) {
           <div class="todoist-header">
             <div class="todoist-logo">✓</div>
             <span class="todoist-header-title">${combinedToday ? '#personal + #home' : '#' + getTodoistProject().toLowerCase()} · ${isToday ? 'today' : dayName.toLowerCase()}</span>
-            <button class="todoist-view-toggle" id="todoist-col-toggle" onclick="toggleTodoistColumns()" title="View as priority columns">▦</button>
             <a href="https://app.todoist.com/app/task/add" target="_blank" rel="noopener" class="todoist-add-btn">+ Add</a>
+            <button class="todoist-view-toggle" id="todoist-col-toggle" onclick="toggleTodoistColumns()" title="View as priority columns">▦</button>
           </div>
           <div id="todoist-container"></div>
           <div class="todoist-footer">Read and complete here · Add and manage in Todoist</div>
