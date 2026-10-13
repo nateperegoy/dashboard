@@ -3717,7 +3717,10 @@ function showToday(targetDate, targetCol) {
       chosenClass: 'sortable-chosen',
       draggable: '.today-card',
       setData: function(dataTransfer, dragEl) {
-        dataTransfer.setData('text/plain', dragEl.dataset.cardId);
+        dataTransfer.setData('text/plain', JSON.stringify({
+          type: 'card', id: dragEl.dataset.cardId,
+          title: dragEl.dataset.dragTitle || '', color: dragEl.dataset.dragColor || ''
+        }));
       },
       onStart: function() {
         const fab = document.getElementById('archive-fab');
@@ -4551,14 +4554,17 @@ function renderTodoistSection() {
     chosenClass: 'sortable-chosen',
     handle: '.todoist-task-body',
     draggable: '.todoist-task',
+    setData: function(dataTransfer, dragEl) {
+      const title = dragEl.querySelector('.todoist-task-title')?.textContent || '';
+      dataTransfer.setData('text/plain', JSON.stringify({
+        type: 'todoist', id: dragEl.dataset.taskId, title: title, color: ''
+      }));
+    },
     onEnd: function(evt) {
       const orderedIds = Array.from(container.querySelectorAll('.todoist-task')).map(el => el.dataset.taskId);
       saveTodoistOrder(orderedIds);
     }
   });
-
-  // Enable drag-to-calendar for Todoist tasks
-  enableTodoistDragToCalendar();
 }
 
 // ── Todoist priority columns toggle ──
