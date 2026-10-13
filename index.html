@@ -3437,16 +3437,34 @@ function renderWeek() {
         const fab = document.getElementById('archive-fab');
         if (fab) fab.classList.remove('drag-active');
         const cardId = evt.item.dataset.cardId;
+        const fromCol = evt.from.dataset.column;
         const newCol = evt.to.dataset.column;
         const card = state.cards.find(c => c.id === cardId);
         if (card) {
-          card.column = newCol;
-          const colCards = Array.from(evt.to.querySelectorAll('.card'));
-          colCards.forEach((el, i) => {
-            const c = state.cards.find(cc => cc.id === el.dataset.cardId);
-            if (c) c.order = i;
-          });
-          saveState();
+          // Dragging from Big Rocks to a day column → duplicate, keep original
+          if (fromCol === THIS_WEEK_ROCKS.id && newCol !== THIS_WEEK_ROCKS.id) {
+            const clone = JSON.parse(JSON.stringify(card));
+            clone.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            clone.column = newCol;
+            clone.order = 0;
+            state.cards.push(clone);
+            // Re-order destination column
+            const colCards = Array.from(evt.to.querySelectorAll('.card'));
+            colCards.forEach((el, i) => {
+              const c = state.cards.find(cc => cc.id === el.dataset.cardId);
+              if (c) c.order = i;
+            });
+            saveState();
+            renderWeek();
+          } else {
+            card.column = newCol;
+            const colCards = Array.from(evt.to.querySelectorAll('.card'));
+            colCards.forEach((el, i) => {
+              const c = state.cards.find(cc => cc.id === el.dataset.cardId);
+              if (c) c.order = i;
+            });
+            saveState();
+          }
         }
       }
     });
