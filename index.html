@@ -4864,8 +4864,49 @@ function setupArchiveDragTarget() {
   });
 }
 
+// ── Location-based domain selection ──
+const WORK_COORDS = { lat: 39.6095, lon: -104.9378 }; // 6335 S Holly St, Centennial CO
+const WORK_RADIUS_M = 200;
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function applyLocationDomain() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(false);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const dist = haversineMeters(pos.coords.latitude, pos.coords.longitude, WORK_COORDS.lat, WORK_COORDS.lon);
+        if (dist <= WORK_RADIUS_M) {
+          // At work — switch to work domain
+          if (activeDomain !== 'work') {
+            activeDomain = 'work';
+            try { localStorage.setItem('dashboard-active-domain', 'work'); } catch(e) {}
+            THIS_WEEK_DAYS = getDomainConfig().weekDays;
+            LATER_MONTHS = getDomainConfig().laterMonths;
+            COLUMNS = getDomainConfig().columns;
+          }
+          resolve('work');
+        } else {
+          // Not at work — show P+H combined today
+          resolve('combined');
+        }
+      },
+      () => resolve(false), // denied or error — fall back to last-used
+      { timeout: 3000, maximumAge: 300000 } // 3s timeout, cache up to 5 min
+    );
+  });
+}
+
 // ── Init ──
 (async () => {
+  const locationResult = await applyLocationDomain();
   applyDomainTheme();
   await loadState();
   await loadPunch();
@@ -4874,13 +4915,26 @@ function setupArchiveDragTarget() {
   renderBoard();
   setupArchiveDragTarget();
 
-  const savedView = (() => { try { return localStorage.getItem('dashboard-view-' + activeDomain); } catch(e) { return null; } })();
-  const startView = ['horizons','week','today','punch','archive'].includes(savedView) ? savedView : 'horizons';
-  if (startView === 'week') showWeek();
-  else if (startView === 'today') showToday();
-  else if (startView === 'punch') showPunch();
-  else if (startView === 'archive') showArchive();
-  else { showHorizons(); }
+  if (locationResult === 'combined') {
+    showCombinedToday();
+  } else if (locationResult === 'work') {
+    const savedView = (() => { try { return localStorage.getItem('dashboard-view-work'); } catch(e) { return null; } })();
+    const startView = ['horizons','week','today','punch','archive'].includes(savedView) ? savedView : 'today';
+    if (startView === 'week') showWeek();
+    else if (startView === 'today') showToday();
+    else if (startView === 'punch') showPunch();
+    else if (startView === 'archive') showArchive();
+    else { showHorizons(); }
+  } else {
+    // Geolocation unavailable/denied — use last-saved view
+    const savedView = (() => { try { return localStorage.getItem('dashboard-view-' + activeDomain); } catch(e) { return null; } })();
+    const startView = ['horizons','week','today','punch','archive'].includes(savedView) ? savedView : 'horizons';
+    if (startView === 'week') showWeek();
+    else if (startView === 'today') showToday();
+    else if (startView === 'punch') showPunch();
+    else if (startView === 'archive') showArchive();
+    else { showHorizons(); }
+  }
 })();
 </script>
 
