@@ -1061,6 +1061,7 @@ body {
   opacity: 0;
   transition: opacity 0.15s;
 }
+.cal-block.cal-block-rock { font-weight: 700; }
 .cal-block:hover .cal-block-remove { opacity: 1; }
 .cal-block-remove:hover { color: var(--text); }
 .cal-now-line {
@@ -3895,6 +3896,7 @@ function placeCalendarBlock(body, startMin, endMin, title, className, block, tim
 
   const el = document.createElement('div');
   el.className = className;
+  if (block && block.sourceType === 'card') el.classList.add('cal-block-rock');
   el.style.top = topPx + 'px';
   el.style.height = heightPx + 'px';
   el.style.position = 'absolute';
