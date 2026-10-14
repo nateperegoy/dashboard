@@ -3871,6 +3871,7 @@ function renderCalendarSlots() {
     const topPx = (nowMin - calStartMin) * pxPerMin;
     const nowLine = document.createElement('div');
     nowLine.className = 'cal-now-line';
+    nowLine.id = 'cal-now-line';
     nowLine.style.top = topPx + 'px';
     body.appendChild(nowLine);
 
@@ -3878,8 +3879,47 @@ function renderCalendarSlots() {
     body.scrollTop = Math.max(0, topPx - 100);
   }
 
+  // Start the now-line ticker (clears any previous one)
+  startNowLineTicker();
+
   // Set up drop targets
   setupCalendarDropTargets(body);
+}
+
+let _nowLineTicker = null;
+function startNowLineTicker() {
+  if (_nowLineTicker) clearInterval(_nowLineTicker);
+  _nowLineTicker = setInterval(updateNowLine, 60000);
+}
+function updateNowLine() {
+  const line = document.getElementById('cal-now-line');
+  const body = document.getElementById('today-calendar-body');
+  if (!body) return;
+  const now = new Date();
+  const actualTodayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+  const isViewingToday = !todayViewDate || todayViewDate === actualTodayStr;
+  const nowH = parseInt(now.toLocaleString('en-US', { timeZone: 'America/Denver', hour: 'numeric', hour12: false }));
+  const nowM = parseInt(now.toLocaleString('en-US', { timeZone: 'America/Denver', minute: 'numeric' }));
+  const nowMin = nowH * 60 + nowM;
+  const calStartMin = CAL_START_HOUR * 60;
+  const calEndMin = CAL_END_HOUR * 60;
+  if (isViewingToday && nowMin >= calStartMin && nowMin < calEndMin) {
+    const slotH = 32;
+    const totalSlots = (CAL_END_HOUR - CAL_START_HOUR) * (60 / CAL_SLOT_MIN);
+    const pxPerMin = (totalSlots * slotH) / (calEndMin - calStartMin);
+    const topPx = (nowMin - calStartMin) * pxPerMin;
+    if (line) {
+      line.style.top = topPx + 'px';
+    } else {
+      const nl = document.createElement('div');
+      nl.className = 'cal-now-line';
+      nl.id = 'cal-now-line';
+      nl.style.top = topPx + 'px';
+      body.appendChild(nl);
+    }
+  } else if (line) {
+    line.remove();
+  }
 }
 
 function placeCalendarBlock(body, startMin, endMin, title, className, block, timeLabel) {
