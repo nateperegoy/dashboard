@@ -4101,13 +4101,20 @@ function setupTaskDragToCalendar(view) {
   // Todoist tasks get drag handlers after they load (in renderTodoistSection)
 }
 
+function getTodoistPriorityColor(el) {
+  if (el.classList.contains('priority-p1')) return '#d1453b';
+  if (el.classList.contains('priority-p2')) return '#eb8909';
+  if (el.classList.contains('priority-p3')) return '#4073ff';
+  return '';
+}
+
 function enableTodoistDragToCalendar() {
   document.querySelectorAll('.todoist-task').forEach(task => {
     task.draggable = true;
     task.addEventListener('dragstart', function(e) {
       const title = task.querySelector('.todoist-task-title')?.textContent || '';
       e.dataTransfer.setData('text/plain', JSON.stringify({
-        type: 'todoist', id: task.dataset.taskId, title: title, color: ''
+        type: 'todoist', id: task.dataset.taskId, title: title, color: getTodoistPriorityColor(task)
       }));
       e.dataTransfer.effectAllowed = 'copy';
     });
@@ -4575,7 +4582,7 @@ function renderTodoistSection() {
     setData: function(dataTransfer, dragEl) {
       const title = dragEl.querySelector('.todoist-task-title')?.textContent || '';
       dataTransfer.setData('text/plain', JSON.stringify({
-        type: 'todoist', id: dragEl.dataset.taskId, title: title, color: ''
+        type: 'todoist', id: dragEl.dataset.taskId, title: title, color: getTodoistPriorityColor(dragEl)
       }));
     },
     onEnd: function(evt) {
