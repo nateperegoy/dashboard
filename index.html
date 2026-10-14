@@ -84,11 +84,11 @@ body {
 /* Header */
 .app-header {
   position: sticky;
-  top: env(safe-area-inset-top, 0px);
+  top: 0;
   z-index: 100;
   background: var(--accent);
   border-bottom: 1px solid var(--border);
-  padding: 16px 24px 12px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 24px 12px;
 }
 .domain-switcher {
   display: flex;
@@ -2046,7 +2046,7 @@ body {
 @media (max-width: 700px) {
   .board { padding: 0 4px 24px; }
   .column { min-width: 180px; }
-  .app-header { padding: 8px 8px 6px; gap: 4px; }
+  .app-header { padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 6px; gap: 4px; }
   .header-row { flex-wrap: wrap; justify-content: center; gap: 4px; }
   .domain-switcher { position: static; order: -1; width: 100%; justify-content: center; gap: 3px; }
   .domain-btn { min-width: 40px; padding: 4px 6px; font-size: 8px; border-radius: 8px; }
