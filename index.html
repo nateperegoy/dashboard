@@ -628,6 +628,23 @@ body {
   font-weight: 700;
   margin: 0 0 16px;
 }
+/* Title on the left, close button pinned to the top-right corner (the mobile .header-row rule
+   would otherwise center both together). */
+.settings-panel .settings-header {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  margin: -6px -10px 8px 0;
+}
+.settings-panel .settings-header h2 { margin: 0; }
+.settings-close {
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 .settings-panel h3 {
   font-size: 12px;
   font-weight: 600;
@@ -2172,9 +2189,9 @@ body {
 
 <div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
   <div class="settings-panel">
-    <div class="header-row" style="margin-bottom:4px">
+    <div class="header-row settings-header">
       <h2>Focus Areas</h2>
-      <button class="btn-icon" onclick="closeSettings()" aria-label="Close" style="font-size:20px">&times;</button>
+      <button class="btn-icon settings-close" onclick="closeSettings()" aria-label="Close">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px">
       Define your focus areas here. Each gets a color bar on its cards.
@@ -2430,7 +2447,15 @@ function showCombinedToday() {
 // Listen for color scheme changes to update domain theme
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyDomainTheme());
 
+// Focus-area swatches: eight clearly different hues (blue, green, orange, purple, red, teal,
+// yellow, pink) so no two read as the same color on a card's color bar.
 const DEFAULT_COLORS = [
+  '#3d6fb6', '#4c9a5f', '#e0802b', '#8a5cb8',
+  '#d6453b', '#2aa198', '#d6b230', '#d9589a',
+];
+// The earlier, muted swatches, in the same order — existing focus areas using one of these are
+// moved to the matching new color by migrateState().
+const LEGACY_COLORS = [
   '#4a6274', '#6b8f71', '#c47a3b', '#8b6b9e',
   '#c45d5d', '#5a8a8a', '#9e8b5a', '#6a7b9e',
 ];
@@ -2574,7 +2599,7 @@ function savePunch() {
 
 function getProjectColor(projectId) {
   const p = state.projects.find(pr => pr.id === projectId);
-  return p ? p.color : '#4a6274';
+  return p ? p.color : DEFAULT_COLORS[0];
 }
 function getProjectName(projectId) {
   const p = state.projects.find(pr => pr.id === projectId);
@@ -3306,6 +3331,9 @@ function closeSettings() {
   document.getElementById('settings-overlay').classList.remove('open');
   renderBoard();
 }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('settings-overlay')?.classList.contains('open')) closeSettings();
+});
 let projectSortable = null;
 function renderProjectList() {
   const list = document.getElementById('project-list');
@@ -3365,7 +3393,7 @@ function removeProject(id) {
   renderProjectList();
 }
 function clearAll() {
-  state.projects = [{ id: generateId(), name: 'General', color: '#4a6274' }];
+  state.projects = [{ id: generateId(), name: 'General', color: DEFAULT_COLORS[0] }];
   state.cards = [];
   saveState();
   closeSettings();
@@ -4783,6 +4811,12 @@ function migrateState() {
   let changed = false;
   state.cards.forEach(c => {
     if (c.column === 'later') { c.column = 'lt-nov'; changed = true; }
+  });
+
+  // ── Focus-area colors: move the old muted swatches to the new, more distinct ones ──
+  (state.projects || []).forEach(p => {
+    const i = LEGACY_COLORS.indexOf(p.color);
+    if (i !== -1) { p.color = DEFAULT_COLORS[i]; changed = true; }
   });
 
   // ── Week rollover: migrate next-week cards to this-week when Monday advances ──
