@@ -2447,11 +2447,12 @@ function showCombinedToday() {
 // Listen for color scheme changes to update domain theme
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyDomainTheme());
 
-// Focus-area swatches: eight clearly different hues (blue, green, orange, purple, red, teal,
-// yellow, pink) so no two read as the same color on a card's color bar.
+// Focus-area swatches: twelve clearly different hues so no two read as the same color on a card's
+// color bar. First eight: blue, green, orange, purple, red, teal, yellow, pink; plus four extras.
 const DEFAULT_COLORS = [
   '#3d6fb6', '#4c9a5f', '#e0802b', '#8a5cb8',
   '#d6453b', '#2aa198', '#d6b230', '#d9589a',
+  '#e07070', '#5bb57a', '#cc6699', '#7a6e5a',
 ];
 // The earlier, muted swatches, in the same order — existing focus areas using one of these are
 // moved to the matching new color by migrateState().
