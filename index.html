@@ -1335,6 +1335,15 @@ body {
 .today-section-label:first-of-type {
   margin-top: 0;
 }
+.rocks-drop-zone {
+  border-radius: var(--radius);
+  border: 2px dashed transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.rocks-drop-zone.drag-over {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
 .today-empty {
   text-align: center;
   padding: 60px 20px;
@@ -3755,6 +3764,8 @@ function showToday(targetDate, targetCol) {
   const visibleCards = dayCards.slice(0, MAX_TODAY_ROCKS);
   const overflowCount = dayCards.length - visibleCards.length;
 
+  // Wrap entire rocks area in a drop zone for Todoist → Big Rock conversion
+  html += `<div class="rocks-drop-zone" data-rocks-drop-column="${todayCol || ''}">`;
   if (dayCards.length > 0) {
     html += `<div class="today-card-list" data-column="${todayCol}">`;
     html += visibleCards.map(c => {
@@ -3784,6 +3795,7 @@ function showToday(targetDate, targetCol) {
       </div>
     `;
   }
+  html += `</div>`; // close rocks-drop-zone
 
   // Routines for this day (shown as P1-style tasks)
   const todayRoutines = getRoutinesForDay(shortDay);
@@ -3872,6 +3884,9 @@ function showToday(targetDate, targetCol) {
       }
     });
   }
+
+  // Set up Todoist → Big Rock drop zone
+  setupTodoistToRocksDrop(view);
 
   // Set up drag from tasks to calendar
   setupTaskDragToCalendar(view);
@@ -4242,6 +4257,48 @@ function removeRoutine(routineId) {
   renderWeek();
 }
 
+function setupTodoistToRocksDrop(view) {
+  const zone = view.querySelector('.rocks-drop-zone');
+  if (!zone) return;
+  // Use the day column if available, fall back to Big Rocks column
+  const targetCol = zone.dataset.rocksDropColumn || THIS_WEEK_ROCKS.id;
+  if (!targetCol) return;
+
+  zone.addEventListener('dragover', function(e) {
+    // Only highlight for Todoist task drags, not card reorder drags
+    if (!e.dataTransfer.types.includes('application/todoist-task')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    zone.classList.add('drag-over');
+  });
+  zone.addEventListener('dragleave', function(e) {
+    if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+  });
+  zone.addEventListener('drop', function(e) {
+    zone.classList.remove('drag-over');
+    if (!e.dataTransfer.types.includes('application/todoist-task')) return;
+    e.preventDefault();
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      if (data.type !== 'todoist') return;
+      // Create a new Big Rock card from the Todoist task
+      const defaultProject = state.projects[0];
+      state.cards.push({
+        id: generateId(),
+        title: data.title,
+        note: '',
+        projectId: defaultProject ? defaultProject.id : '',
+        column: targetCol,
+        details: [],
+        expanded: false,
+        order: state.cards.filter(c => c.column === targetCol).length,
+      });
+      saveState();
+      showToday(todayViewDate);
+    } catch(err) {}
+  });
+}
+
 function setupTaskDragToCalendar(view) {
   // Enable HTML5 drag on today-cards
   view.querySelectorAll('.today-card[draggable]').forEach(card => {
@@ -4272,6 +4329,8 @@ function enableTodoistDragToCalendar() {
       e.dataTransfer.setData('text/plain', JSON.stringify({
         type: 'todoist', id: task.dataset.taskId, title: title, color: getTodoistPriorityColor(task)
       }));
+      // Marker type so drop zones can identify Todoist drags during dragover
+      e.dataTransfer.setData('application/todoist-task', '');
       e.dataTransfer.effectAllowed = 'copy';
     });
   });
@@ -4740,6 +4799,7 @@ function renderTodoistSection() {
       dataTransfer.setData('text/plain', JSON.stringify({
         type: 'todoist', id: dragEl.dataset.taskId, title: title, color: getTodoistPriorityColor(dragEl)
       }));
+      dataTransfer.setData('application/todoist-task', '');
     },
     onEnd: function(evt) {
       const orderedIds = Array.from(container.querySelectorAll('.todoist-task')).map(el => el.dataset.taskId);
