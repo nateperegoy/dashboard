@@ -1981,7 +1981,25 @@ body {
   color: var(--text-muted);
   margin-top: 2px;
   line-height: 1.35;
+  white-space: pre-line;
+  word-break: break-word;
 }
+/* Links and phone numbers inside Todoist task text */
+.todoist-link {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: bottom;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
+  font-weight: 500;
+}
+.todoist-link:hover { text-decoration-color: var(--accent); }
+.todoist-link.todoist-tel::before { content: "☎ "; font-size: 0.9em; }
 .todoist-task-meta {
   display: flex;
   align-items: center;
@@ -2792,6 +2810,73 @@ function esc(str) {
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+
+function escAttr(str) {
+  return esc(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ── Todoist text → HTML ──
+// Todoist task titles and descriptions arrive as plain text with markdown-style links
+// ("[label](https://…)"), bare URLs, and phone numbers. Render each as a tappable link:
+//   • markdown links show their label
+//   • bare URLs show a short "domain/path…" form (full URL kept in the tooltip)
+//   • US phone numbers show as (720) 555-0123 and open the dialer via tel:
+// Everything else is HTML-escaped, so task text can never inject markup.
+const TODOIST_TOKEN_RE = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|((?:https?:\/\/|www\.)[^\s<>]+)|((?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4})/g;
+
+function shortenUrl(url) {
+  let t = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
+  return t.length > 32 ? t.slice(0, 31) + '…' : t;
+}
+
+function todoistText(str) {
+  const src = String(str || '');
+  let html = '';
+  let last = 0;
+  src.replace(TODOIST_TOKEN_RE, (match, mdLabel, mdUrl, bareUrl, phone, offset) => {
+    html += esc(src.slice(last, offset));
+    last = offset + match.length;
+
+    if (mdUrl) {
+      html += `<a class="todoist-link" href="${escAttr(mdUrl)}" target="_blank" rel="noopener" title="${escAttr(mdUrl)}">${esc(mdLabel)}</a>`;
+      return match;
+    }
+
+    if (bareUrl) {
+      // Trailing punctuation belongs to the sentence, not the link ("see example.com.")
+      let url = bareUrl;
+      let trailing = '';
+      while (/[.,;:!?'"]$/.test(url) || (url.endsWith(')') && url.split(')').length > url.split('(').length)) {
+        trailing = url.slice(-1) + trailing;
+        url = url.slice(0, -1);
+      }
+      last -= trailing.length;
+      const href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+      html += `<a class="todoist-link" href="${escAttr(href)}" target="_blank" rel="noopener" title="${escAttr(href)}">${esc(shortenUrl(url))}</a>`;
+      return match;
+    }
+
+    // Phone: skip digit runs that are really part of something else (an amount, an ID, a date)
+    const before = src[offset - 1] || '';
+    const after = src[offset + match.length] || '';
+    const digits = match.replace(/\D/g, '');
+    const national = digits.length === 11 && digits[0] === '1' ? digits.slice(1) : digits;
+    if (/[\d$.,\/-]/.test(before) || /\d/.test(after) || national.length !== 10) {
+      html += esc(match);
+      return match;
+    }
+    const pretty = `(${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6)}`;
+    html += `<a class="todoist-link todoist-tel" href="tel:+1${national}">${pretty}</a>`;
+    return match;
+  });
+  html += esc(src.slice(last));
+  return html;
+}
+
+// Plain-text version (markdown links collapse to their label) for drag data and similar.
+function todoistPlainText(str) {
+  return String(str || '').replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/g, '$1');
 }
 
 function updateCounts() {
@@ -4154,7 +4239,7 @@ function enableTodoistDragToCalendar() {
   document.querySelectorAll('.todoist-task').forEach(task => {
     task.draggable = true;
     task.addEventListener('dragstart', function(e) {
-      const title = task.querySelector('.todoist-task-title')?.textContent || '';
+      const title = task.dataset.title || task.querySelector('.todoist-task-title')?.textContent || '';
       e.dataTransfer.setData('text/plain', JSON.stringify({
         type: 'todoist', id: task.dataset.taskId, title: title, color: getTodoistPriorityColor(task)
       }));
@@ -4599,11 +4684,11 @@ function renderTodoistSection() {
     const labels = (t.labels || []).join(', ');
 
     return `
-      <div class="todoist-task ${priorityClass ? 'priority-' + priorityClass : ''}" data-task-id="${t.id}">
+      <div class="todoist-task ${priorityClass ? 'priority-' + priorityClass : ''}" data-task-id="${t.id}" data-title="${escAttr(todoistPlainText(t.content))}">
         <button class="todoist-check" onclick="completeTodoistTask('${t.id}')" aria-label="Complete task">✓</button>
         <div class="todoist-task-body">
-          <div class="todoist-task-title">${esc(t.content)}</div>
-          ${t.description ? `<div class="todoist-task-desc">${esc(t.description)}</div>` : ''}
+          <div class="todoist-task-title">${todoistText(t.content)}</div>
+          ${t.description ? `<div class="todoist-task-desc">${todoistText(t.description)}</div>` : ''}
           <div class="todoist-task-meta">
             ${isOverdue ? `<span class="todoist-task-overdue">Overdue · ${dueDate}</span>` : ''}
             ${priorityLabel ? `<span class="todoist-task-priority ${priorityClass}">${priorityLabel}</span>` : ''}
@@ -4622,7 +4707,7 @@ function renderTodoistSection() {
     handle: '.todoist-task-body',
     draggable: '.todoist-task',
     setData: function(dataTransfer, dragEl) {
-      const title = dragEl.querySelector('.todoist-task-title')?.textContent || '';
+      const title = dragEl.dataset.title || dragEl.querySelector('.todoist-task-title')?.textContent || '';
       dataTransfer.setData('text/plain', JSON.stringify({
         type: 'todoist', id: dragEl.dataset.taskId, title: title, color: getTodoistPriorityColor(dragEl)
       }));
@@ -4663,10 +4748,10 @@ function renderTodoistColumns(container, tasks) {
     const priorityClass = p === 4 ? 'p1' : p === 3 ? 'p2' : p === 2 ? 'p3' : '';
     const labels = (t.labels || []).join(', ');
     return `
-      <div class="todoist-task ${priorityClass ? 'priority-' + priorityClass : ''}" data-task-id="${t.id}">
+      <div class="todoist-task ${priorityClass ? 'priority-' + priorityClass : ''}" data-task-id="${t.id}" data-title="${escAttr(todoistPlainText(t.content))}">
         <button class="todoist-check" onclick="completeTodoistTask('${t.id}')" aria-label="Complete task">✓</button>
         <div class="todoist-task-body">
-          <div class="todoist-task-title">${esc(t.content)}</div>
+          <div class="todoist-task-title">${todoistText(t.content)}</div>
           <div class="todoist-task-meta">
             ${isOverdue ? `<span class="todoist-task-overdue">Overdue</span>` : ''}
             ${labels ? `<span class="todoist-task-label">${esc(labels)}</span>` : ''}
