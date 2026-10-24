@@ -2379,7 +2379,7 @@ let LATER_MONTHS = DOMAINS[activeDomain].laterMonths;
 let COLUMNS = DOMAINS[activeDomain].columns;
 
 function applyDomainTheme() {
-  const cfg = getDomainConfig();
+  const cfg = combinedToday ? { ...getDomainConfig(), ...COMBINED_THEME } : getDomainConfig();
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
     document.documentElement.getAttribute('data-theme') === 'dark';
   const mode = isDark ? 'dark' : 'light';
@@ -2395,7 +2395,7 @@ function applyDomainTheme() {
   if (meta) meta.setAttribute('content', cfg.accent[mode]);
   // Update domain button active state
   document.querySelectorAll('.domain-btn').forEach(btn => {
-    btn.classList.toggle('active-domain', btn.dataset.domain === activeDomain);
+    btn.classList.toggle('active-domain', btn.dataset.domain === (combinedToday ? 'combined' : activeDomain));
   });
   // Update title
   document.title = 'Dashboard';
@@ -2403,6 +2403,7 @@ function applyDomainTheme() {
 
 async function switchDomain(domain) {
   if (domain === activeDomain && !combinedToday) return;
+  if (combinedToday) await flushCombined(); // make sure P+H edits reach each domain before reloading
   combinedToday = false;
   activeDomain = domain;
   try { localStorage.setItem('dashboard-active-domain', domain); } catch(e) {}
@@ -2429,8 +2430,90 @@ async function switchDomain(domain) {
 
 let combinedToday = false;
 
-function showCombinedToday() {
+// ── P+H combined mode ──
+// Horizons, Week and Today in P+H work on one merged board made of Personal + Home only (never
+// Work). Project ids are prefixed with their domain while merged, and every save splits the merged
+// board back into the two domains' own stored boards.
+let _combinedBase = null; // each domain's stored board as loaded, so unrelated fields survive a save
+const COMBINED_DOMAINS = ['personal', 'home'];
+function combinedDomainOf(id) { return id && String(id).includes('::') ? String(id).split('::')[0] : null; }
+function combinedStrip(id) { return id && String(id).includes('::') ? String(id).split('::').slice(1).join('::') : id; }
+
+async function buildCombinedState() {
+  _combinedBase = {};
+  const merged = { projects: [], cards: [] };
+  for (const key of COMBINED_DOMAINS) {
+    let ds;
+    if (!combinedToday && key === activeDomain && state) {
+      ds = state; // already loaded and migrated
+    } else {
+      ds = (await loadDomainState(key)) || { projects: [], cards: [] };
+      // Run the usual week/month rollover on this domain's own board (it saves itself).
+      const prev = { state, activeDomain, combined: combinedToday };
+      combinedToday = false; activeDomain = key; state = ds;
+      try { migrateState(); } catch(e) {}
+      ds = state;
+      state = prev.state; activeDomain = prev.activeDomain; combinedToday = prev.combined;
+    }
+    _combinedBase[key] = ds;
+    (ds.projects || []).forEach(p => merged.projects.push({ ...p, id: key + '::' + p.id }));
+    (ds.cards || []).forEach(c => merged.cards.push({ ...c, projectId: c.projectId ? key + '::' + c.projectId : c.projectId, _domain: key }));
+  }
+  return merged;
+}
+
+let _combinedSaveTimeout = null;
+function saveCombined() {
+  // Anything created while merged has no domain yet — file it under Personal.
+  state.projects.forEach(p => { if (!combinedDomainOf(p.id)) p.id = 'personal::' + p.id; });
+  state.cards.forEach(c => {
+    if (c.projectId && !combinedDomainOf(c.projectId)) c.projectId = 'personal::' + c.projectId;
+    if (!c._domain) c._domain = combinedDomainOf(c.projectId) || 'personal';
+  });
+  const payloads = {};
+  COMBINED_DOMAINS.forEach(key => {
+    const base = _combinedBase && _combinedBase[key] ? _combinedBase[key] : {};
+    payloads[key] = {
+      ...base,
+      projects: state.projects.filter(p => combinedDomainOf(p.id) === key).map(p => ({ ...p, id: combinedStrip(p.id) })),
+      cards: state.cards.filter(c => c._domain === key).map(c => {
+        const out = { ...c, projectId: c.projectId ? combinedStrip(c.projectId) : c.projectId };
+        delete out._domain; delete out._resolvedColor; delete out._resolvedProject; delete out._sourceDomain;
+        return out;
+      }),
+    };
+    if (_combinedBase) _combinedBase[key] = payloads[key];
+    try { localStorage.setItem(DOMAINS[key].storageKey, JSON.stringify(payloads[key])); } catch(e) {}
+  });
+  _combinedPending = payloads;
+  clearTimeout(_combinedSaveTimeout);
+  _combinedSaveTimeout = setTimeout(flushCombined, 500);
+}
+
+let _combinedPending = null;
+async function flushCombined() {
+  clearTimeout(_combinedSaveTimeout);
+  const payloads = _combinedPending;
+  _combinedPending = null;
+  if (!payloads) return;
+  await Promise.all(COMBINED_DOMAINS.map(key =>
+    fetch('/api/board?key=' + DOMAINS[key].blobKey, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payloads[key]),
+    }).catch(() => {})
+  ));
+}
+
+async function showCombinedToday() {
+  if (combinedToday) await flushCombined();
+  state = await buildCombinedState();
   combinedToday = true;
+  // Personal and Home share the same seven-day layout, so use it for the merged Week/Horizons.
+  activeDomain = 'personal';
+  THIS_WEEK_DAYS = getDomainConfig().weekDays;
+  LATER_MONTHS = getDomainConfig().laterMonths;
+  COLUMNS = getDomainConfig().columns;
   // Apply combined theme colors
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
     document.documentElement.getAttribute('data-theme') === 'dark';
@@ -2525,29 +2608,16 @@ async function loadDomainState(domainKey) {
   return null;
 }
 
-// Get combined day cards from both personal and home domains for today view
+// Day cards for the P+H Today view come straight from the merged Personal + Home board.
 async function getCombinedDayCards(todayCol) {
   if (!todayCol) return [];
-  const results = [];
-  for (const domainKey of ['personal', 'home']) {
-    let domainState;
-    if (domainKey === activeDomain) {
-      domainState = state;
-    } else {
-      domainState = await loadDomainState(domainKey);
-    }
-    if (!domainState || !domainState.cards) continue;
-    const domainCards = domainState.cards.filter(c => c.column === todayCol);
-    // Tag each card with its project color/name from the domain's own projects
-    for (const card of domainCards) {
-      const proj = (domainState.projects || []).find(p => p.id === card.projectId);
-      card._resolvedColor = proj ? proj.color : DEFAULT_COLORS[0];
-      card._resolvedProject = proj ? proj.name : DOMAINS[domainKey].label;
-      card._sourceDomain = domainKey;
-    }
-    results.push(...domainCards);
-  }
-  return results.sort((a, b) => (a.order || 0) - (b.order || 0));
+  return state.cards
+    .filter(c => c.column === todayCol)
+    .map(c => {
+      const proj = (state.projects || []).find(p => p.id === c.projectId);
+      return { ...c, _resolvedColor: proj ? proj.color : DEFAULT_COLORS[0], _resolvedProject: proj ? proj.name : DOMAINS[c._domain || 'personal'].label, _sourceDomain: c._domain };
+    })
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
 }
 
 async function loadState() {
@@ -2583,6 +2653,7 @@ async function loadState() {
 
 let _saveTimeout = null;
 function saveState() {
+  if (combinedToday) { saveCombined(); return; }
   const sk = getStorageKey();
   const bk = getBlobKey();
   try { localStorage.setItem(sk, JSON.stringify(state)); } catch(e) {}
