@@ -2615,7 +2615,7 @@ async function getCombinedDayCards(todayCol) {
     .filter(c => c.column === todayCol)
     .map(c => {
       const proj = (state.projects || []).find(p => p.id === c.projectId);
-      return { ...c, _resolvedColor: proj ? proj.color : DEFAULT_COLORS[0], _resolvedProject: proj ? proj.name : DOMAINS[c._domain || 'personal'].label, _sourceDomain: c._domain };
+      return { ...c, _resolvedColor: proj ? proj.color : DEFAULT_COLORS[0], _resolvedProject: proj ? projectLabel(proj) : DOMAINS[c._domain || 'personal'].label, _sourceDomain: c._domain };
     })
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 }
@@ -2725,9 +2725,22 @@ function getProjectColor(projectId) {
   const p = state.projects.find(pr => pr.id === projectId);
   return p ? p.color : DEFAULT_COLORS[0];
 }
+// In P+H, a focus area whose name also exists in the other domain gets a "· Personal" / "· Home" tag
+// so the two can be told apart. (Display only — the stored name is never changed.)
+function projectLabel(p) {
+  if (!p) return '';
+  if (combinedToday) {
+    const dom = combinedDomainOf(p.id);
+    const key = String(p.name || '').trim().toLowerCase();
+    if (dom && state.projects.some(o => o !== p && combinedDomainOf(o.id) !== dom && String(o.name || '').trim().toLowerCase() === key)) {
+      return p.name + ' · ' + DOMAINS[dom].label;
+    }
+  }
+  return p.name;
+}
 function getProjectName(projectId) {
   const p = state.projects.find(pr => pr.id === projectId);
-  return p ? p.name : '';
+  return p ? projectLabel(p) : '';
 }
 
 function getDayDates() {
@@ -3140,7 +3153,7 @@ function openCardMenu(cardId, btnEl) {
     </div>
     <div class="card-menu-section">Label</div>
     <div class="card-menu-colors" style="display:flex;flex-wrap:wrap;gap:4px;padding:2px 12px 6px">
-      ${state.projects.map(p => `<div class="project-option ${card.projectId === p.id ? 'active' : ''}" data-project-id="${p.id}"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>`).join('')}
+      ${state.projects.map(p => `<div class="project-option ${card.projectId === p.id ? 'active' : ''}" data-project-id="${p.id}"><div class="color-dot" style="background:${p.color}"></div>${esc(projectLabel(p))}</div>`).join('')}
     </div>
     <div class="card-menu-divider"></div>
     <div class="card-menu-item" data-action="duplicate">
@@ -3221,7 +3234,7 @@ function showAddForm(btn, columnId) {
     <textarea placeholder="Note (optional)" id="add-note" rows="2" style="font-family:inherit;font-size:13px;border:1px solid var(--border);background:transparent;color:var(--text);width:100%;padding:6px 8px;border-radius:var(--radius-sm);resize:vertical;margin-top:6px;box-sizing:border-box"></textarea>
     <div class="color-picker-row" id="color-picker" style="margin-top:6px">
       ${state.projects.map(p => `
-        <div class="project-option" data-project-id="${p.id}" onclick="selectProject(this)"><div class="color-dot" style="background:${p.color}"></div>${esc(p.name)}</div>
+        <div class="project-option" data-project-id="${p.id}" onclick="selectProject(this)"><div class="color-dot" style="background:${p.color}"></div>${esc(projectLabel(p))}</div>
       `).join('')}
     </div>
     <div class="add-form-row">
