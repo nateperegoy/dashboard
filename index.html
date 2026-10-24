@@ -2507,6 +2507,49 @@ const DEFAULT_STATE = {
   cards: [],
 };
 
+// Load state from a specific domain without switching the active domain
+async function loadDomainState(domainKey) {
+  const cfg = DOMAINS[domainKey];
+  if (!cfg) return null;
+  try {
+    const resp = await fetch('/api/board?key=' + cfg.blobKey);
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.data) return json.data;
+    }
+  } catch(e) {}
+  try {
+    const raw = localStorage.getItem(cfg.storageKey);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+// Get combined day cards from both personal and home domains for today view
+async function getCombinedDayCards(todayCol) {
+  if (!todayCol) return [];
+  const results = [];
+  for (const domainKey of ['personal', 'home']) {
+    let domainState;
+    if (domainKey === activeDomain) {
+      domainState = state;
+    } else {
+      domainState = await loadDomainState(domainKey);
+    }
+    if (!domainState || !domainState.cards) continue;
+    const domainCards = domainState.cards.filter(c => c.column === todayCol);
+    // Tag each card with its project color/name from the domain's own projects
+    for (const card of domainCards) {
+      const proj = (domainState.projects || []).find(p => p.id === card.projectId);
+      card._resolvedColor = proj ? proj.color : DEFAULT_COLORS[0];
+      card._resolvedProject = proj ? proj.name : DOMAINS[domainKey].label;
+      card._sourceDomain = domainKey;
+    }
+    results.push(...domainCards);
+  }
+  return results.sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
 async function loadState() {
   const sk = getStorageKey();
   const bk = getBlobKey();
@@ -3708,7 +3751,7 @@ function navigateDay(offset) {
   showToday(newDate, newCol);
 }
 
-function showToday(targetDate, targetCol) {
+async function showToday(targetDate, targetCol) {
   cleanupTodoist();
 
   // Determine which date to show
@@ -3718,7 +3761,13 @@ function showToday(targetDate, targetCol) {
   todayViewDate = viewDate;
   const isToday = viewDate === actualTodayISO;
 
-  const todayCol = targetCol || (isToday ? getTodayColumnId() : getColumnForDate(viewDate));
+  // In combined mode, use personal's weekDays (all 7 days) to find today's column
+  const combinedWeekDays = combinedToday ? DOMAINS.personal.weekDays : null;
+  const todayCol = targetCol || (isToday
+    ? (combinedWeekDays
+      ? (() => { const d = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][now.getDay()]; return (combinedWeekDays.find(w => w.label === d) || {}).id || null; })()
+      : getTodayColumnId())
+    : getColumnForDate(viewDate));
   const view = document.getElementById('today-view');
   const board = document.getElementById('board');
   const punch = document.getElementById('punch-view');
@@ -3739,8 +3788,10 @@ function showToday(targetDate, targetCol) {
   const shortDay = shortDayNames[viewDateObj.getDay()];
   const dateStr = months[viewDateObj.getMonth()] + ' ' + viewDateObj.getDate() + ', ' + viewDateObj.getFullYear();
 
-  // Show day-specific cards from the week view (not Big Rocks) — skip in combined mode
-  const dayCards = (todayCol && !combinedToday) ? state.cards.filter(c => c.column === todayCol).sort((a,b) => (a.order||0) - (b.order||0)) : [];
+  // Show day-specific cards from the week view — in combined mode, merge from both domains
+  const dayCards = combinedToday
+    ? await getCombinedDayCards(todayCol)
+    : (todayCol ? state.cards.filter(c => c.column === todayCol).sort((a,b) => (a.order||0) - (b.order||0)) : []);
   const dayLabel = todayCol ? (THIS_WEEK_DAYS.find(d => d.id === todayCol)?.label || 'Today') : null;
 
   let html = `
@@ -3769,8 +3820,8 @@ function showToday(targetDate, targetCol) {
   if (dayCards.length > 0) {
     html += `<div class="today-card-list" data-column="${todayCol}">`;
     html += visibleCards.map(c => {
-      const color = getProjectColor(c.projectId);
-      const projName = getProjectName(c.projectId);
+      const color = c._resolvedColor || getProjectColor(c.projectId);
+      const projName = c._resolvedProject || getProjectName(c.projectId);
       return `
         <div class="today-card" draggable="true" data-card-id="${c.id}" data-drag-type="card" data-drag-title="${esc(c.title)}" data-drag-color="${color}" style="--card-tint:${color}">
           <div class="today-card-bar" style="background:${color}"></div>
