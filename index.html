@@ -233,6 +233,16 @@ body {
   overflow-x: auto;
 }
 
+/* Near/mid column accent wash for Horizons view */
+.column[data-urgency="near"],
+.column-header[data-urgency="near"] {
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+}
+.column[data-urgency="mid"],
+.column-header[data-urgency="mid"] {
+  background: color-mix(in srgb, var(--accent) 3%, var(--bg));
+}
+
 /* Far-column fade for Horizons view */
 .column[data-urgency="far"],
 .column-header[data-urgency="far"] {
