@@ -2228,8 +2228,30 @@ body {
     </p>
     <div id="project-list"></div>
     <button class="btn" onclick="addProject()" style="margin-top:12px">+ Add focus area</button>
+    <h3 style="margin-top:24px">Data Recovery</h3>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0 0 8px">
+      If focus areas or cards ended up in the wrong domain, use this to move them.
+    </p>
+    <button class="btn" onclick="openDomainFixer()" style="font-size:13px">Fix Domain Assignment</button>
     <h3 style="margin-top:24px">Danger zone</h3>
     <button class="btn" onclick="showConfirmModal('Clear all cards and focus areas? This cannot be undone.', clearAll)" style="color:#c44">Reset everything</button>
+  </div>
+</div>
+
+<div class="settings-overlay" id="domain-fixer-overlay" onclick="if(event.target===this)closeDomainFixer()">
+  <div class="settings-panel" style="max-width:500px">
+    <div class="header-row settings-header">
+      <h2>Fix Domain Assignment</h2>
+      <button class="btn-icon settings-close" onclick="closeDomainFixer()" aria-label="Close">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px">
+      Select focus areas that are in the wrong domain. Their cards will move with them.
+    </p>
+    <div id="domain-fixer-list" style="max-height:60vh;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button class="btn" onclick="closeDomainFixer()">Cancel</button>
+      <button class="btn btn-primary" onclick="applyDomainFix()">Move Selected</button>
+    </div>
   </div>
 </div>
 
@@ -2485,10 +2507,24 @@ async function buildCombinedState() {
 
 let _combinedSaveTimeout = null;
 function saveCombined() {
-  // Anything created while merged has no domain yet — file it under Personal.
-  state.projects.forEach(p => { if (!combinedDomainOf(p.id)) p.id = 'personal::' + p.id; });
+  // If a project lacks a domain prefix, try to find which domain it originally came from
+  state.projects.forEach(p => {
+    if (!combinedDomainOf(p.id)) {
+      // Check _combinedBase to see which domain this project belongs to
+      const found = _combinedBase && COMBINED_DOMAINS.find(key =>
+        (_combinedBase[key]?.projects || []).some(bp => bp.id === p.id)
+      );
+      p.id = (found || 'personal') + '::' + p.id;
+    }
+  });
   state.cards.forEach(c => {
-    if (c.projectId && !combinedDomainOf(c.projectId)) c.projectId = 'personal::' + c.projectId;
+    if (c.projectId && !combinedDomainOf(c.projectId)) {
+      // Same: try to find the project's domain from base data
+      const found = _combinedBase && COMBINED_DOMAINS.find(key =>
+        (_combinedBase[key]?.projects || []).some(bp => bp.id === c.projectId)
+      );
+      c.projectId = (found || 'personal') + '::' + c.projectId;
+    }
     if (!c._domain) c._domain = combinedDomainOf(c.projectId) || 'personal';
   });
   const payloads = {};
@@ -3321,7 +3357,7 @@ function submitAdd(el, columnId) {
   const fabStack3 = document.getElementById('fab-stack');
   if (fabStack3) fabStack3.style.display = '';
 
-  state.cards.push({
+  const newCard = {
     id: generateId(),
     title: title,
     note: note,
@@ -3330,7 +3366,12 @@ function submitAdd(el, columnId) {
     details: [],
     expanded: false,
     order: state.cards.filter(c => c.column === columnId).length,
-  });
+  };
+  // In combined mode, tag card with its domain so saveCombined routes it correctly
+  if (combinedToday && projectId) {
+    newCard._domain = combinedDomainOf(projectId) || 'personal';
+  }
+  state.cards.push(newCard);
   saveState();
 
   // Re-render the active view so the new card appears
@@ -3433,7 +3474,7 @@ function printView() {
   window.print();
 }
 
-function submitQuickAdd() {
+async function submitQuickAdd() {
   const title = document.getElementById('quick-add-title').value.trim();
   if (!title) { document.getElementById('quick-add-title').focus(); return; }
 
@@ -3444,6 +3485,34 @@ function submitQuickAdd() {
   const targetDomain = domainChip.dataset.domain;
   const targetColumn = colChip.dataset.column;
 
+  // In combined mode, don't switch domains — just tag the card properly
+  if (combinedToday) {
+    // Find a project from the target domain to assign
+    const domainProjects = state.projects.filter(p => combinedDomainOf(p.id) === targetDomain);
+    const projectId = domainProjects[0]?.id;
+
+    const newCard = {
+      id: generateId(),
+      title: title,
+      note: '',
+      projectId: projectId,
+      column: targetColumn,
+      details: [],
+      expanded: false,
+      order: state.cards.filter(c => c.column === targetColumn).length,
+      _domain: targetDomain,
+    };
+    state.cards.push(newCard);
+    saveState();
+
+    closeQuickAdd();
+    if (currentView === 'week') renderWeek();
+    else if (currentView === 'today') showToday();
+    else if (currentView === 'punch') renderPunch();
+    else renderBoard();
+    return;
+  }
+
   // Switch to the target domain if different, load its state
   const needsSwitch = targetDomain !== activeDomain;
   if (needsSwitch) {
@@ -3452,7 +3521,7 @@ function submitQuickAdd() {
     try { localStorage.setItem('dashboard-active-domain', activeDomain); } catch(e) {}
     COLUMNS = getDomainConfig().columns;
     applyDomainTheme();
-    loadState();
+    await loadState();
   }
 
   // Use first project as default
@@ -3559,6 +3628,107 @@ function clearAll() {
   state.cards = [];
   saveState();
   closeSettings();
+}
+
+// ── Domain Fixer (Data Recovery) ──
+let _domainFixerData = null;
+
+async function openDomainFixer() {
+  // Load all domains' data fresh
+  _domainFixerData = {};
+  for (const key of ['personal', 'home', 'work']) {
+    _domainFixerData[key] = (await loadDomainState(key)) || { projects: [], cards: [] };
+  }
+
+  const list = document.getElementById('domain-fixer-list');
+  const allDomains = ['personal', 'home', 'work'];
+  const otherDomains = (d) => allDomains.filter(k => k !== d);
+
+  let html = '';
+  for (const domain of allDomains) {
+    const ds = _domainFixerData[domain];
+    if (!ds.projects || ds.projects.length === 0) continue;
+    html += `<h3 style="margin:16px 0 8px;font-size:14px">Currently in ${DOMAINS[domain].label}</h3>`;
+    for (const p of ds.projects) {
+      const cardCount = (ds.cards || []).filter(c => c.projectId === p.id).length;
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="width:12px;height:12px;border-radius:50%;background:${p.color || '#888'};flex-shrink:0"></div>
+        <span style="flex:1;font-size:13px">${p.name} <span style="color:var(--text-secondary)">(${cardCount} card${cardCount !== 1 ? 's' : ''})</span></span>
+        <select data-project-id="${p.id}" data-current-domain="${domain}" style="font-size:12px;padding:2px 4px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px">
+          <option value="">Keep here</option>
+          ${otherDomains(domain).map(d => `<option value="${d}">Move to ${DOMAINS[d].label}</option>`).join('')}
+        </select>
+      </div>`;
+    }
+  }
+
+  if (!html) html = '<p style="color:var(--text-secondary)">No focus areas found.</p>';
+  list.innerHTML = html;
+  document.getElementById('domain-fixer-overlay').classList.add('open');
+}
+
+function closeDomainFixer() {
+  document.getElementById('domain-fixer-overlay').classList.remove('open');
+  _domainFixerData = null;
+}
+
+async function applyDomainFix() {
+  const selects = document.querySelectorAll('#domain-fixer-list select');
+  const moves = [];
+  selects.forEach(sel => {
+    if (sel.value) {
+      moves.push({
+        projectId: sel.dataset.projectId,
+        from: sel.dataset.currentDomain,
+        to: sel.value,
+      });
+    }
+  });
+
+  if (moves.length === 0) { closeDomainFixer(); return; }
+
+  // Apply moves
+  for (const move of moves) {
+    const srcData = _domainFixerData[move.from];
+    const dstData = _domainFixerData[move.to];
+
+    // Move project
+    const projIdx = srcData.projects.findIndex(p => p.id === move.projectId);
+    if (projIdx === -1) continue;
+    const [proj] = srcData.projects.splice(projIdx, 1);
+    dstData.projects.push(proj);
+
+    // Move associated cards
+    const cardsToMove = srcData.cards.filter(c => c.projectId === move.projectId);
+    srcData.cards = srcData.cards.filter(c => c.projectId !== move.projectId);
+    dstData.cards.push(...cardsToMove);
+  }
+
+  // Save all affected domains to cloud and localStorage
+  const affectedDomains = new Set();
+  moves.forEach(m => { affectedDomains.add(m.from); affectedDomains.add(m.to); });
+
+  for (const key of affectedDomains) {
+    const ds = _domainFixerData[key];
+    try { localStorage.setItem(DOMAINS[key].storageKey, JSON.stringify(ds)); } catch(e) {}
+    try {
+      await fetch('/api/board?key=' + DOMAINS[key].blobKey, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ds),
+      });
+    } catch(e) {}
+  }
+
+  closeDomainFixer();
+  closeSettings();
+
+  // Reload current domain
+  await loadState();
+  if (currentView === 'week') renderWeek();
+  else if (currentView === 'today') showToday();
+  else if (currentView === 'punch') renderPunch();
+  else renderBoard();
 }
 
 // ── Week View ──
