@@ -2902,15 +2902,10 @@ function renderBoard() {
 
     let count = 0;
     if (col.hasDays) {
-      // Count deduplicated titles (matches the Horizons column rendering)
-      const allTW = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id || THIS_WEEK_DAYS.some(d => d.id === c.column));
-      const titles = new Set(allTW.map(c => c.title.trim().toLowerCase()));
-      count = titles.size;
+      count = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).length;
     } else if (col.hasNextWeekDays) {
       const nwDays = getDomainConfig().nextWeekDays || [];
-      const allNW = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column));
-      const nwTitles = new Set(allNW.map(c => c.title.trim().toLowerCase()));
-      count = nwTitles.size;
+      count = state.cards.filter(c => c.column === col.id).length;
     } else if (col.hasMonths) {
       count = state.cards.filter(c => LATER_MONTHS.some(m => m.id === c.column)).length;
     } else {
@@ -2935,16 +2930,8 @@ function renderBoard() {
     const dateStr = dates[col.id] || '';
 
     if (col.hasDays) {
-      // Deduplicate Big Rocks by title for the Horizons (forest) view — a card like
-      // "Lift" that appears on Mon/Wed/Fri in the Week view only shows once here.
-      const allRocks = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id || THIS_WEEK_DAYS.some(d => d.id === c.column)).sort((a,b) => (a.order||0) - (b.order||0));
-      const seen = new Set();
-      const rocksCards = allRocks.filter(c => {
-        const key = c.title.trim().toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+      // Horizons only shows Big Rocks — day-level cards live in the Week view
+      const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).sort((a,b) => (a.order||0) - (b.order||0));
       colEl.innerHTML = `
         ${dateStr ? `<div class="column-sub-date">${dateStr}</div>` : ''}
         <button class="add-card-btn" onclick="showAddForm(this, '${THIS_WEEK_ROCKS.id}')">+ Add</button>
@@ -2953,15 +2940,8 @@ function renderBoard() {
         </div>
       `;
     } else if (col.hasNextWeekDays) {
-      const nwDays = getDomainConfig().nextWeekDays || [];
-      const allNW = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column)).sort((a,b) => (a.order||0) - (b.order||0));
-      const nwSeen = new Set();
-      const nwCards = allNW.filter(c => {
-        const key = c.title.trim().toLowerCase();
-        if (nwSeen.has(key)) return false;
-        nwSeen.add(key);
-        return true;
-      });
+      // Horizons only shows generic next-week cards, not day-specific ones
+      const nwCards = state.cards.filter(c => c.column === col.id).sort((a,b) => (a.order||0) - (b.order||0));
       colEl.innerHTML = `
         ${dateStr ? `<div class="column-sub-date">${dateStr}</div>` : ''}
         <button class="add-card-btn" onclick="showAddForm(this, '${col.id}')">+ Add</button>
@@ -3129,12 +3109,9 @@ function updateCounts() {
     const col = COLUMNS.find(c => c.id === colId);
     let count;
     if (col && col.hasDays) {
-      const allTW = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id || THIS_WEEK_DAYS.some(d => d.id === c.column));
-      count = new Set(allTW.map(c => c.title.trim().toLowerCase())).size;
+      count = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).length;
     } else if (col && col.hasNextWeekDays) {
-      const nwDays = getDomainConfig().nextWeekDays || [];
-      const allNW = state.cards.filter(c => c.column === colId || nwDays.some(d => d.id === c.column));
-      count = new Set(allNW.map(c => c.title.trim().toLowerCase())).size;
+      count = state.cards.filter(c => c.column === colId).length;
     } else if (col && col.hasMonths) {
       count = state.cards.filter(c => LATER_MONTHS.some(m => m.id === c.column)).length;
     } else {
