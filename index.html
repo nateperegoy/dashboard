@@ -3887,8 +3887,9 @@ function renderWeek() {
         const newCol = evt.to.dataset.column;
         const card = state.cards.find(c => c.id === cardId);
         if (card) {
-          // Dragging from Big Rocks to a day column → duplicate, keep original
-          if (fromCol === THIS_WEEK_ROCKS.id && newCol !== THIS_WEEK_ROCKS.id) {
+          // Dragging between Big Rocks and day columns → copy, keep original
+          if ((fromCol === THIS_WEEK_ROCKS.id && newCol !== THIS_WEEK_ROCKS.id) ||
+              (newCol === THIS_WEEK_ROCKS.id && fromCol !== THIS_WEEK_ROCKS.id)) {
             const clone = JSON.parse(JSON.stringify(card));
             clone.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             clone.column = newCol;
