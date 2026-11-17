@@ -2902,7 +2902,10 @@ function renderBoard() {
 
     let count = 0;
     if (col.hasDays) {
-      count = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).length;
+      // Count deduplicated titles (matches the Horizons column rendering)
+      const allTW = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id || THIS_WEEK_DAYS.some(d => d.id === c.column));
+      const titles = new Set(allTW.map(c => c.title.trim().toLowerCase()));
+      count = titles.size;
     } else if (col.hasNextWeekDays) {
       const nwDays = getDomainConfig().nextWeekDays || [];
       count = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column)).length;
@@ -2930,7 +2933,16 @@ function renderBoard() {
     const dateStr = dates[col.id] || '';
 
     if (col.hasDays) {
-      const rocksCards = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id).sort((a,b) => (a.order||0) - (b.order||0));
+      // Deduplicate Big Rocks by title for the Horizons (forest) view — a card like
+      // "Lift" that appears on Mon/Wed/Fri in the Week view only shows once here.
+      const allRocks = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id || THIS_WEEK_DAYS.some(d => d.id === c.column)).sort((a,b) => (a.order||0) - (b.order||0));
+      const seen = new Set();
+      const rocksCards = allRocks.filter(c => {
+        const key = c.title.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
       colEl.innerHTML = `
         ${dateStr ? `<div class="column-sub-date">${dateStr}</div>` : ''}
         <button class="add-card-btn" onclick="showAddForm(this, '${THIS_WEEK_ROCKS.id}')">+ Add</button>
