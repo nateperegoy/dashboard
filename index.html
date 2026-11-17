@@ -2908,7 +2908,9 @@ function renderBoard() {
       count = titles.size;
     } else if (col.hasNextWeekDays) {
       const nwDays = getDomainConfig().nextWeekDays || [];
-      count = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column)).length;
+      const allNW = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column));
+      const nwTitles = new Set(allNW.map(c => c.title.trim().toLowerCase()));
+      count = nwTitles.size;
     } else if (col.hasMonths) {
       count = state.cards.filter(c => LATER_MONTHS.some(m => m.id === c.column)).length;
     } else {
@@ -2952,12 +2954,19 @@ function renderBoard() {
       `;
     } else if (col.hasNextWeekDays) {
       const nwDays = getDomainConfig().nextWeekDays || [];
-      const nwCards = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column));
+      const allNW = state.cards.filter(c => c.column === col.id || nwDays.some(d => d.id === c.column)).sort((a,b) => (a.order||0) - (b.order||0));
+      const nwSeen = new Set();
+      const nwCards = allNW.filter(c => {
+        const key = c.title.trim().toLowerCase();
+        if (nwSeen.has(key)) return false;
+        nwSeen.add(key);
+        return true;
+      });
       colEl.innerHTML = `
         ${dateStr ? `<div class="column-sub-date">${dateStr}</div>` : ''}
         <button class="add-card-btn" onclick="showAddForm(this, '${col.id}')">+ Add</button>
         <div class="card-list" data-column="${col.id}">
-          ${nwCards.sort((a,b) => (a.order||0) - (b.order||0)).map(c => renderCard(c)).join('')}
+          ${nwCards.map(c => renderCard(c)).join('')}
         </div>
       `;
     } else if (col.hasMonths) {
@@ -3120,10 +3129,12 @@ function updateCounts() {
     const col = COLUMNS.find(c => c.id === colId);
     let count;
     if (col && col.hasDays) {
-      count = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id || THIS_WEEK_DAYS.some(d => d.id === c.column)).length;
+      const allTW = state.cards.filter(c => c.column === THIS_WEEK_ROCKS.id || THIS_WEEK_DAYS.some(d => d.id === c.column));
+      count = new Set(allTW.map(c => c.title.trim().toLowerCase())).size;
     } else if (col && col.hasNextWeekDays) {
       const nwDays = getDomainConfig().nextWeekDays || [];
-      count = state.cards.filter(c => c.column === colId || nwDays.some(d => d.id === c.column)).length;
+      const allNW = state.cards.filter(c => c.column === colId || nwDays.some(d => d.id === c.column));
+      count = new Set(allNW.map(c => c.title.trim().toLowerCase())).size;
     } else if (col && col.hasMonths) {
       count = state.cards.filter(c => LATER_MONTHS.some(m => m.id === c.column)).length;
     } else {
